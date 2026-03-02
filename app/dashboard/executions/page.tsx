@@ -5,22 +5,29 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function CallExecutions() {
-  const [profile, setProfile] = useState<any>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [hasBalance, setHasBalance] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchExecutions = async () => {
       try {
-        const res = await fetch('/api/user/profile');
+        const res = await fetch('/api/user/dashboard');
         const data = await res.json();
-        if (data.success) setProfile(data.data);
+        
+        if (data.success) {
+          setHasBalance(data.data.hasBalance);
+          if (data.data.hasBalance) {
+            setLogs(data.data.logs || []);
+          }
+        }
       } catch (error) {
-        console.error('Failed to load profile');
+        console.error('Failed to load executions');
       }
       setIsLoading(false);
     };
-    fetchProfile();
+    fetchExecutions();
   }, []);
 
   if (isLoading) {
@@ -34,8 +41,6 @@ export default function CallExecutions() {
     );
   }
 
-  const hasBalance = profile && Number(profile.balance) > 0;
-
   if (!hasBalance) {
     return (
       <div className="bg-white rounded-3xl shadow-sm border border-red-100 p-12 text-center relative overflow-hidden max-w-3xl mx-auto mt-10">
@@ -46,26 +51,22 @@ export default function CallExecutions() {
           </svg>
         </div>
         <h3 className="text-2xl font-extrabold text-slate-900 mb-3">Feature Locked</h3>
-        <p className="text-slate-500 mb-8 max-w-md mx-auto text-base">Your wallet balance is $0.00. Detailed call logs, recordings, and transcripts are only available for accounts with active credits.</p>
+        <p className="text-slate-500 mb-8 max-w-md mx-auto text-base">Your available balance is 0 Minutes. Detailed call logs, recordings, and transcripts are only available for accounts with active minutes.</p>
         <Link href="/dashboard/plans" className="inline-flex items-center px-8 py-3.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 hover:-translate-y-0.5">
-          Top Up Wallet Now
+          Top Up Minutes Now
           <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
         </Link>
       </div>
     );
   }
 
-  const logs = [
-    { id: 'd6481f9a', phone: '+91 62025 73697', type: 'vobiz outbound', duration: 29, time: '28 Feb 26, 15:05', cost: '$0.083', status: 'Completed' },
-    { id: 'c9161a2b', phone: '+91 62025 73697', type: 'vobiz outbound', duration: 42, time: '28 Feb 26, 03:45', cost: '$0.124', status: 'Completed' },
-    { id: 'a1b2c3d4', phone: '+1 415 555 2671', type: 'sales inbound', duration: 156, time: '27 Feb 26, 11:20', cost: '$0.450', status: 'Completed' },
-    { id: 'e5f6g7h8', phone: '+44 7700 900077', type: 'support call', duration: 12, time: '27 Feb 26, 09:15', cost: '$0.035', status: 'Failed' },
-    { id: 'i9j0k1l2', phone: '+91 98765 43210', type: 'vobiz outbound', duration: 88, time: '26 Feb 26, 16:30', cost: '$0.250', status: 'Completed' },
-  ];
+  const filteredLogs = logs.filter(log => 
+    log.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    log.phone.includes(searchTerm)
+  );
 
   return (
-    <div className="space-y-6 sm:space-y-8 font-sans">
-      
+    <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Call Executions</h2>
@@ -80,7 +81,6 @@ export default function CallExecutions() {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        
         <div className="p-5 border-b border-gray-100 bg-slate-50/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
           <div className="relative w-full sm:w-96">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -118,54 +118,66 @@ export default function CallExecutions() {
                 <th className="px-6 py-4 uppercase tracking-wider text-xs">Type</th>
                 <th className="px-6 py-4 uppercase tracking-wider text-xs">Duration</th>
                 <th className="px-6 py-4 uppercase tracking-wider text-xs">Timestamp</th>
-                <th className="px-6 py-4 uppercase tracking-wider text-xs">Cost</th>
+                <th className="px-6 py-4 uppercase tracking-wider text-xs">Minutes Deducted</th>
                 <th className="px-6 py-4 uppercase tracking-wider text-xs">Status</th>
                 <th className="px-6 py-4 uppercase tracking-wider text-xs text-center">Data</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {logs.filter(log => log.id.includes(searchTerm) || log.phone.includes(searchTerm)).map((log, index) => (
-                <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
-                  <td className="px-6 py-4 font-mono text-slate-700 font-medium flex items-center">
-                    {log.id}
-                    <button className="ml-2 text-slate-300 group-hover:text-blue-500 transition-colors">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-slate-900 font-semibold">{log.phone}</td>
-                  <td className="px-6 py-4 text-slate-600">{log.type}</td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{log.duration}s</td>
-                  <td className="px-6 py-4 text-slate-500 text-xs leading-relaxed">{log.time}</td>
-                  <td className="px-6 py-4 text-slate-900 font-bold">{log.cost}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${log.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                      {log.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="flex w-full flex-col items-center bg-blue-50 px-3 py-1.5 rounded-lg text-blue-700 hover:bg-blue-600 hover:text-white transition-all group/btn border border-blue-100 hover:border-blue-600 shadow-sm">
-                      <span className="font-bold flex items-center text-xs">
-                        Recordings 
-                        <svg className="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      </span>
-                      <span className="text-[10px] text-blue-500 group-hover/btn:text-blue-200 mt-0.5">& Transcripts</span>
-                    </button>
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500 font-medium">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                      <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                    </div>
+                    No call executions found yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredLogs.map((log, index) => (
+                  <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
+                    <td className="px-6 py-4 font-mono text-slate-700 font-medium flex items-center">
+                      {log.id}
+                      <button className="ml-2 text-slate-300 group-hover:text-blue-500 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 text-slate-900 font-semibold">{log.phone}</td>
+                    <td className="px-6 py-4 text-slate-600">{log.type}</td>
+                    <td className="px-6 py-4 text-slate-600 font-medium">{log.duration}s</td>
+                    <td className="px-6 py-4 text-slate-500 text-xs leading-relaxed">{log.time}</td>
+                    <td className="px-6 py-4 text-slate-900 font-bold">{(log.duration / 60).toFixed(2)} Mins</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${log.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                        {log.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button className="flex w-full flex-col items-center bg-blue-50 px-3 py-1.5 rounded-lg text-blue-700 hover:bg-blue-600 hover:text-white transition-all group/btn border border-blue-100 hover:border-blue-600 shadow-sm">
+                        <span className="font-bold flex items-center text-xs">
+                          Recordings 
+                          <svg className="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </span>
+                        <span className="text-[10px] text-blue-500 group-hover/btn:text-blue-200 mt-0.5">& Transcripts</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-slate-500">
-          <p>Showing 1 to 5 of 68 executions</p>
-          <div className="flex space-x-1">
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Previous</button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg bg-blue-50 text-blue-600 font-bold">1</button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">2</button>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Next</button>
+        {filteredLogs.length > 0 && (
+          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-slate-500">
+            <p>Showing {filteredLogs.length} execution(s)</p>
+            <div className="flex space-x-1">
+              <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Previous</button>
+              <button className="px-3 py-1.5 border border-gray-200 rounded-lg bg-blue-50 text-blue-600 font-bold">1</button>
+              <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Next</button>
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>
