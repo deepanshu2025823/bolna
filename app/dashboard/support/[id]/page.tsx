@@ -5,6 +5,17 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+const formatMessage = (text: string) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-extrabold">{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 export default function TicketChat() {
   const { id } = useParams();
   const router = useRouter();
@@ -95,9 +106,8 @@ export default function TicketChat() {
       </div>
 
       <div className="flex-1 bg-slate-50 border-x border-gray-100 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
-        {messages.map((msg, idx) => {
+        {messages.map((msg) => {
           const isClient = msg.sender_role === 'client';
-          
           return (
             <div key={msg.id} className={`flex flex-col ${isClient ? 'items-end' : 'items-start'} animate-fade-in`}>
               {!isClient && (
@@ -110,7 +120,7 @@ export default function TicketChat() {
                     : 'bg-white border border-gray-100 text-slate-700 rounded-tl-none'
                 }`}
               >
-                {msg.message}
+                {formatMessage(msg.message)}
               </div>
               <span className={`text-[10px] text-slate-400 mt-1 font-medium ${isClient ? 'mr-1' : 'ml-1'}`}>
                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -143,16 +153,8 @@ export default function TicketChat() {
                 rows={1}
               />
             </div>
-            <button 
-              type="submit" 
-              disabled={isSending || !newMessage.trim()}
-              className="bg-blue-600 text-white h-12 w-12 rounded-2xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              {isSending ? (
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              ) : (
-                <svg className="w-5 h-5 ml-1 transform rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-              )}
+            <button type="submit" disabled={isSending || !newMessage.trim()} className="bg-blue-600 text-white h-12 w-12 rounded-2xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0">
+              {isSending ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg className="w-5 h-5 ml-1 transform rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>}
             </button>
           </form>
         )}
