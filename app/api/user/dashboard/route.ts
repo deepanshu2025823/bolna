@@ -42,26 +42,52 @@ export async function GET() {
       });
     }
 
-    const totalExecutions = Math.floor(balance * 0.4) + 12; 
-    const totalCost = (totalExecutions * 0.22); 
-    const totalDuration = totalExecutions * 87; 
-    
-    const avgCost = totalExecutions > 0 ? (totalCost / totalExecutions).toFixed(2) : '0.00';
-    const avgDuration = totalExecutions > 0 ? (totalDuration / totalExecutions).toFixed(1) : '0.0';
+    const bolnaApiKey = process.env.BOLNA_API_KEY;
+    if (!bolnaApiKey) {
+       console.error("Missing Bolna API Key in environment variables.");
+       return NextResponse.json({ success: false, message: 'API Key missing' }, { status: 500 });
+    }
 
-    const recentLogs = Array.from({ length: 5 }).map((_, i) => {
-      const randId = Math.random().toString(36).substring(2, 8);
-      const isCompleted = Math.random() > 0.2; 
-      return {
-        id: randId,
-        phone: `+91 ${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-        type: i % 2 === 0 ? 'vobiz outbound' : 'sales inbound',
-        duration: isCompleted ? Math.floor(20 + Math.random() * 120) : Math.floor(Math.random() * 10),
-        time: new Date(Date.now() - i * 86400000).toLocaleString('en-US', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }),
-        cost: isCompleted ? `$${(Math.random() * 0.5).toFixed(3)}` : '$0.000',
-        status: isCompleted ? 'Completed' : 'Failed'
-      };
+    const response = await fetch('https://api.bolna.dev/v1/executions', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${bolnaApiKey}`,
+        'Content-Type': 'application/json'
+      }
     });
+
+    let rawExecutions = [];
+    if (response.ok) {
+        const bolnaData = await response.json();
+        rawExecutions = Array.isArray(bolnaData) ? bolnaData : (bolnaData.data || bolnaData.executions || []);
+    } else {
+        console.error('Bolna API Error:', await response.text());
+    }
+
+    let totalExecutions = rawExecutions.length;
+    let totalDuration = 0;
+    let completedCount = 0;
+
+    const mappedLogs = rawExecutions.map((exec: any) => {
+        const duration = exec.duration || 0;
+        const status = exec.status ? exec.status.toLowerCase() : 'completed';
+        
+        totalDuration += duration;
+        if (status === 'completed' || status === 'success') {
+            completedCount++;
+        }
+
+        return {
+            id: exec.id || exec.execution_id || `exe_${Math.random().toString(36).substring(7)}`,
+            phone: exec.customer_number || exec.to || 'Unknown Number',
+            type: exec.agent_id ? 'AI Agent Call' : 'Outbound',
+            duration: duration,
+            time: exec.created_at ? new Date(exec.created_at).toLocaleString() : new Date().toLocaleString(),
+            status: status === 'completed' ? 'Completed' : 'Failed'
+        };
+    });
+
+    const avgDuration = totalExecutions > 0 ? (totalDuration / totalExecutions).toFixed(1) : '0.0';
 
     return NextResponse.json({
       success: true,
@@ -69,13 +95,11 @@ export async function GET() {
         hasBalance: true,
         metrics: {
           totalExecutions,
-          totalCost: totalCost.toFixed(2),
-          totalDuration: totalDuration.toFixed(1),
-          avgCost,
+          totalDuration: totalDuration, 
           avgDuration,
-          completedCount: Math.floor(totalExecutions * 0.85) 
+          completedCount
         },
-        logs: recentLogs
+        logs: mappedLogs 
       }
     });
 
