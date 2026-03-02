@@ -14,6 +14,9 @@ export default function AdminSettings() {
   const [apiData, setApiData] = useState({ bolna_api_key: '' });
   const [securityData, setSecurityData] = useState({ current_password: '', new_password: '', confirm_password: '' });
 
+  // UI States
+  const [showApiKey, setShowApiKey] = useState(false);
+
   // Fetch current settings on load
   useEffect(() => {
     const fetchSettings = async () => {
@@ -22,9 +25,9 @@ export default function AdminSettings() {
         const data = await res.json();
         if (data.success) {
           setGeneralData({
-            portal_name: data.data.settings.portal_name || '',
-            support_email: data.data.settings.support_email || '',
-            admin_name: data.data.admin.name || ''
+            portal_name: data.data.settings.portal_name || 'AI Portal Pro',
+            support_email: data.data.settings.support_email || 'support@company.com',
+            admin_name: data.data.admin.name || 'Admin User'
           });
           setApiData({
             bolna_api_key: data.data.settings.bolna_api_key || ''
@@ -137,19 +140,21 @@ export default function AdminSettings() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Portal Name</label>
-                    <input type="text" required value={generalData.portal_name} onChange={(e) => setGeneralData({...generalData, portal_name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input type="text" required value={generalData.portal_name} onChange={(e) => setGeneralData({...generalData, portal_name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Support Email</label>
-                    <input type="email" required value={generalData.support_email} onChange={(e) => setGeneralData({...generalData, support_email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input type="email" required value={generalData.support_email} onChange={(e) => setGeneralData({...generalData, support_email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Admin Full Name</label>
-                  <input type="text" required value={generalData.admin_name} onChange={(e) => setGeneralData({...generalData, admin_name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input type="text" required value={generalData.admin_name} onChange={(e) => setGeneralData({...generalData, admin_name: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                 </div>
                 <div className="pt-4 border-t border-gray-100 flex justify-end">
-                  <button type="submit" disabled={isSaving} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-slate-800 transition-all">{isSaving ? 'Saving...' : 'Save Changes'}</button>
+                  <button type="submit" disabled={isSaving} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-md disabled:opacity-70 flex items-center justify-center min-w-[140px]">
+                    {isSaving ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Save Changes'}
+                  </button>
                 </div>
               </form>
             </div>
@@ -162,10 +167,37 @@ export default function AdminSettings() {
               <form onSubmit={(e) => handleSave(e, 'api')} className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Bolna Enterprise API Key</label>
-                  <input type="password" value={apiData.bolna_api_key} onChange={(e) => setApiData({...apiData, bolna_api_key: e.target.value})} placeholder="sk_live_bolna..." className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm" />
+                  <div className="relative">
+                    <input 
+                      type={showApiKey ? 'text' : 'password'} 
+                      value={apiData.bolna_api_key} 
+                      onChange={(e) => setApiData({...apiData, bolna_api_key: e.target.value})} 
+                      placeholder="sk_live_..." 
+                      className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm transition-all" 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showApiKey ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0a10.05 10.05 0 015.71-1.29c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0l3.29 3.29" /></svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
+                
+                <div className="bg-purple-50 border border-purple-100 p-4 rounded-xl flex items-start">
+                  <svg className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <p className="text-sm text-purple-800 font-medium">Your API key is securely encrypted and stored in the database. It is used to generate client sub-accounts.</p>
+                </div>
+
                 <div className="pt-4 border-t border-gray-100 flex justify-end">
-                  <button type="submit" disabled={isSaving} className="bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all">{isSaving ? 'Verifying...' : 'Save API Key'}</button>
+                  <button type="submit" disabled={isSaving} className="bg-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-purple-700 transition-all shadow-md disabled:opacity-70 flex items-center justify-center min-w-[140px]">
+                    {isSaving ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Save API Key'}
+                  </button>
                 </div>
               </form>
             </div>
@@ -177,18 +209,20 @@ export default function AdminSettings() {
               <form onSubmit={(e) => handleSave(e, 'security')} className="space-y-6 max-w-md">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Current Password</label>
-                  <input type="password" required value={securityData.current_password} onChange={(e) => setSecurityData({...securityData, current_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none" />
+                  <input type="password" required value={securityData.current_password} onChange={(e) => setSecurityData({...securityData, current_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">New Password</label>
-                  <input type="password" required value={securityData.new_password} onChange={(e) => setSecurityData({...securityData, new_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none" />
+                  <input type="password" required value={securityData.new_password} onChange={(e) => setSecurityData({...securityData, new_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Confirm New Password</label>
-                  <input type="password" required value={securityData.confirm_password} onChange={(e) => setSecurityData({...securityData, confirm_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none" />
+                  <input type="password" required value={securityData.confirm_password} onChange={(e) => setSecurityData({...securityData, confirm_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all" />
                 </div>
                 <div className="pt-4 border-t border-gray-100">
-                  <button type="submit" disabled={isSaving} className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-all w-full sm:w-auto">{isSaving ? 'Updating...' : 'Update Password'}</button>
+                  <button type="submit" disabled={isSaving} className="bg-red-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-red-700 transition-all shadow-md disabled:opacity-70 flex items-center justify-center w-full sm:w-auto min-w-[180px]">
+                    {isSaving ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Update Password'}
+                  </button>
                 </div>
               </form>
             </div>
