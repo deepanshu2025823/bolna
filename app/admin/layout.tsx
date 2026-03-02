@@ -143,25 +143,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                </button>
 
                {isNotifOpen && (
-                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in origin-top-right z-50">
-                   <div className="px-4 py-3 border-b border-gray-50 flex justify-between items-center">
-                     <h3 className="font-bold text-slate-800">Notifications</h3>
-                     <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md">{unreadCount} New</span>
-                   </div>
-                   <div className="max-h-80 overflow-y-auto">
-                     {notifications.map((notif) => (
-                       <div key={notif.id} className={`px-4 py-3 border-b border-gray-50 hover:bg-slate-50 cursor-pointer transition-colors ${notif.unread ? 'bg-blue-50/30' : ''}`}>
-                         <p className={`text-sm font-semibold ${notif.unread ? 'text-slate-900' : 'text-slate-600'}`}>{notif.title}</p>
-                         <p className="text-xs text-slate-500 mt-1">{notif.desc}</p>
-                         <p className="text-[10px] text-slate-400 mt-1.5 font-medium">{notif.time}</p>
-                       </div>
-                     ))}
-                   </div>
-                   <div className="px-4 py-2 border-t border-gray-50 text-center">
-                     <button className="text-xs font-bold text-blue-600 hover:text-blue-700">Mark all as read</button>
-                   </div>
-                 </div>
-               )}
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 -mr-12 sm:mr-0 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 animate-fade-in origin-top-right z-50">
+                  <div className="px-4 py-3 border-b border-gray-50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-800">Notifications</h3>
+                    <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md">{unreadCount} New</span>
+                  </div>
+                  <div className="max-h-72 sm:max-h-80 overflow-y-auto custom-scrollbar">
+                    {notifications.map((notif) => (
+                      <div key={notif.id} className={`px-4 py-3 border-b border-gray-50 hover:bg-slate-50 cursor-pointer transition-colors ${notif.unread ? 'bg-blue-50/30' : ''}`}>
+                        <p className={`text-sm font-semibold ${notif.unread ? 'text-slate-900' : 'text-slate-600'} break-words`}>{notif.title}</p>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{notif.desc}</p>
+                        <p className="text-[10px] text-slate-400 mt-1.5 font-medium">{notif.time}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-2.5 border-t border-gray-50 text-center bg-gray-50/50">
+                    <button className="text-xs font-bold text-blue-600 hover:text-blue-700 w-full">Mark all as read</button>
+                  </div>
+                </div>
+              )}
              </div>
              
              <div className="relative" ref={profileRef}>

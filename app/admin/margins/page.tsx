@@ -102,10 +102,10 @@ export default function MarginTracking() {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h3 className="font-bold text-slate-900 text-lg">Client Profitability Report</h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Breakdown of margins per active client</p>
+            <h3 className="font-bold text-slate-900 text-[14px] md:text-1xl">Client Profitability Report</h3>
+            <p className="text-[10px] md:text-base text-slate-500 font-medium mt-0.5">Breakdown of margins per active client</p>
           </div>
-          <button className="text-sm bg-white border border-gray-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
+          <button className="text-[10px] md:text-sm bg-white border border-gray-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
             Export CSV
           </button>
         </div>
