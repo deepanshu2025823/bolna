@@ -21,8 +21,13 @@ export default function MarginTracking() {
     fetchUsers();
   }, []);
 
-  const totalRevenue = users.reduce((acc, user) => acc + (Number(user.balance) > 0 ? Number(user.balance) * 2.5 : 0), 0) + 1250; 
-  const totalBolnaCost = totalRevenue * 0.18; 
+  // FULLY DYNAMIC CALCULATIONS (No hardcoded +1250 base values)
+  const totalRevenue = users.reduce((acc, user) => {
+    const balance = Number(user.balance) || 0;
+    return acc + (balance > 0 ? balance * 2.5 : 0); // Logic: $2.5 revenue generated per credit in wallet
+  }, 0); 
+
+  const totalBolnaCost = totalRevenue * 0.18; // Logic: Bolna API consumes ~18% of revenue
   const netProfit = totalRevenue - totalBolnaCost;
   const marginPercentage = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
 
@@ -123,7 +128,8 @@ export default function MarginTracking() {
                 <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No client data available to calculate margins.</td></tr>
               ) : (
                 users.map((user) => {
-                  const clientRev = Number(user.balance) > 0 ? Number(user.balance) * 2.5 : 0;
+                  const balance = Number(user.balance) || 0;
+                  const clientRev = balance > 0 ? balance * 2.5 : 0;
                   const clientCost = clientRev * 0.18;
                   const clientProfit = clientRev - clientCost;
                   const clientMargin = clientRev > 0 ? Number(((clientProfit / clientRev) * 100).toFixed(0)) : 0;
