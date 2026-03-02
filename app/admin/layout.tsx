@@ -11,18 +11,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [adminName, setAdminName] = useState('Admin User');
   const [adminInitial, setAdminInitial] = useState('A');
   
-  // Dropdown States
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   
   const pathname = usePathname();
   const router = useRouter();
   
-  // Refs for click-outside to close dropdowns
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  // Simulated Notifications for the Dropdown
   const notifications = [
     { id: 1, title: 'New Client Joined', desc: 'Deepanshu Joshi has registered.', time: '2m ago', unread: true },
     { id: 2, title: 'Wallet Top-up', desc: 'Client added $99.99 to their wallet.', time: '1h ago', unread: true },
@@ -35,7 +32,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     
-    // Handle click outside to close dropdowns
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) setIsProfileOpen(false);
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) setIsNotifOpen(false);
@@ -48,7 +44,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  // Fetch real Admin Profile data from our settings API
   useEffect(() => {
     const fetchAdminProfile = async () => {
       try {
@@ -67,7 +62,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   const handleLogout = async () => {
-    // Basic logout handling (In a real app, you'd clear the cookie via an API route)
     document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     router.push('/login');
   };
@@ -83,15 +77,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
       
-      {/* Mobile Sidebar Overlay */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 z-20 lg:hidden backdrop-blur-sm transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-slate-900/40 z-40 lg:hidden backdrop-blur-sm transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsSidebarOpen(false)}
       ></div>
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-[280px] bg-[#0B1121] border-r border-slate-800/60 text-white transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col shadow-2xl lg:shadow-none`}>
-        {/* Logo */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[280px] bg-[#0B1121] border-r border-slate-800/60 text-white transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex flex-col shadow-2xl lg:shadow-none`}>
         <div className="h-20 flex items-center px-6 border-b border-slate-800/60">
           <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 mr-3 shadow-lg shadow-blue-500/20 border border-blue-400/20">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -99,7 +90,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-xl font-extrabold tracking-tight text-white">AI Portal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Pro</span></span>
         </div>
 
-        {/* Navigation */}
         <div className="px-4 py-8 flex-1 overflow-y-auto custom-scrollbar">
           <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4">Main Menu</p>
           <nav className="space-y-1.5">
@@ -117,7 +107,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
         </div>
 
-        {/* Bottom Fast Action */}
         <div className="p-4 m-4">
           <div className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border border-blue-500/20 rounded-2xl p-4 text-center">
              <p className="text-xs text-blue-200 font-medium mb-3">Need help setting up?</p>
@@ -126,10 +115,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
-        {/* Top Navbar */}
         <header className={`sticky top-0 z-20 h-20 transition-all duration-200 flex items-center justify-between px-4 sm:px-6 lg:px-10 ${scrolled ? 'bg-white/80 backdrop-blur-xl border-b border-gray-200/80 shadow-sm' : 'bg-transparent border-b border-transparent'}`}>
           <div className="flex items-center">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-800 hover:bg-slate-100 p-2.5 rounded-xl mr-3 transition-colors focus:outline-none">
@@ -142,7 +129,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div className="flex items-center space-x-3 sm:space-x-5">
              
-             {/* Notification Dropdown */}
              <div className="relative" ref={notifRef}>
                <button 
                   onClick={() => {setIsNotifOpen(!isNotifOpen); setIsProfileOpen(false);}} 
@@ -156,7 +142,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                </button>
 
-               {/* Notification Popup Menu */}
                {isNotifOpen && (
                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in origin-top-right z-50">
                    <div className="px-4 py-3 border-b border-gray-50 flex justify-between items-center">
@@ -179,7 +164,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                )}
              </div>
              
-             {/* Profile Dropdown */}
              <div className="relative" ref={profileRef}>
                <div 
                  onClick={() => {setIsProfileOpen(!isProfileOpen); setIsNotifOpen(false);}}
@@ -197,7 +181,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                  </svg>
                </div>
 
-               {/* Profile Popup Menu */}
                {isProfileOpen && (
                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in origin-top-right z-50">
                    <div className="px-4 py-3 border-b border-gray-50 mb-1 lg:hidden">
