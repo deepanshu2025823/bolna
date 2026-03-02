@@ -12,11 +12,22 @@ export async function GET() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role ENUM('admin', 'client') DEFAULT 'client',
+        role ENUM('admin', 'client', 'staff') DEFAULT 'client',
+        designation VARCHAR(255) DEFAULT 'Staff',
         bolna_sub_account_id VARCHAR(255) UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    try {
+      await connection.query("ALTER TABLE users ADD COLUMN designation VARCHAR(255) DEFAULT 'Staff'");
+    } catch (e) {
+    }
+
+    try {
+      await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'client', 'staff') DEFAULT 'client'");
+    } catch (e) {
+    }
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS plans (
@@ -38,6 +49,38 @@ export async function GET() {
       )
     `);
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        portal_name VARCHAR(255) DEFAULT 'AI Portal Pro',
+        support_email VARCHAR(255) DEFAULT 'support@company.com',
+        bolna_api_key VARCHAR(255) DEFAULT ''
+      )
+    `);
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS tickets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        status ENUM('open', 'closed') DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS ticket_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        sender_id INT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
     const [existingPlans]: any = await connection.query('SELECT COUNT(*) as count FROM plans');
     if (existingPlans[0].count === 0) {
       await connection.query(`
@@ -52,7 +95,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Database tables and default plans created successfully!' 
+      message: 'Database tables, support chat schema, and default plans initialized successfully!' 
     });
 
   } catch (error: any) {
