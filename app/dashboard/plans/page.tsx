@@ -2,120 +2,154 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Script from 'next/script';
 
-export default function ClientPlans() {
+export default function PlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [purchasingId, setPurchasingId] = useState<number | null>(null);
-  const [message, setMessage] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await fetch('/api/admin/plans');
+        const res = await fetch('/api/admin/plans'); 
         const data = await res.json();
-        if (data.success) setPlans(data.data);
+        if (data.success) {
+          setPlans(data.data);
+        }
       } catch (error) {
-        console.error('Failed to fetch plans');
+        console.error('Failed to load plans');
       }
       setIsLoading(false);
     };
     fetchPlans();
   }, []);
 
-  const handlePurchase = async (planId: number) => {
-    setPurchasingId(planId);
-    setMessage('');
-    
+  const handlePayment = async (plan: any) => {
+    setIsProcessing(true);
     try {
-      const res = await fetch('/api/user/buy-plan', {
+      const res = await fetch('/api/user/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ amount: plan.price })
       });
-      const data = await res.json();
-      
-      if (data.success) {
-        setMessage(data.message);
-        setTimeout(() => window.location.href = '/dashboard', 2000);
-      } else {
-        setMessage(data.message || 'Transaction failed');
+      const orderData = await res.json();
+
+      if (!orderData.success) {
+        alert('Failed to initialize payment.');
+        setIsProcessing(false);
+        return;
       }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_SMPZWp9Km7zQyf', 
+        amount: orderData.order.amount,
+        currency: orderData.order.currency,
+        name: 'AI Portal Pro',
+        description: `Purchase ${plan.name} Plan`,
+        order_id: orderData.order.id,
+        handler: async function (response: any) {
+          const verifyRes = await fetch('/api/user/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              minutesToAdd: plan.allocated_credits,
+              planName: plan.name
+            })
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            alert(`Success! ${plan.allocated_credits} Minutes added to your wallet. An email receipt has been sent.`);
+            window.location.href = '/dashboard';
+          } else {
+            alert('Payment verification failed.');
+          }
+        },
+        theme: { color: '#2563eb' }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        alert(`Payment Failed: ${response.error.description}`);
+      });
+      rzp.open();
+
     } catch (error) {
-      setMessage('Network error. Please try again.');
+      console.error('Payment error', error);
+      alert('Something went wrong.');
     }
-    setPurchasingId(null);
+    setIsProcessing(false);
   };
 
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
+  }
+
   return (
-    <div className="space-y-8 font-sans">
-      
-      <div className="text-center max-w-2xl mx-auto mt-6">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Add Funds & Credits</h2>
-        <p className="text-slate-500 text-lg">Choose a plan to instantly add credits to your wallet. These credits will be used for your AI voice agent executions.</p>
+    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+
+      <div className="text-center max-w-2xl mx-auto">
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Simple, Transparent Pricing</h2>
+        <p className="text-slate-500 mt-3 font-medium text-lg">Top up your wallet with minutes to execute AI calls. No hidden fees.</p>
       </div>
 
-      {message && (
-        <div className={`p-4 rounded-xl text-center font-bold max-w-md mx-auto animate-fade-in ${message.includes('Success') ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
-          {message}
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="flex justify-center py-12"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan) => (
-            <div key={plan.id} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col hover:shadow-xl transition-all duration-300 relative">
-              {plan.name === 'Growth' && (
-                 <div className="absolute top-0 right-8 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full shadow-md">
-                   Most Popular
-                 </div>
-              )}
-              
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
-                <div className="flex items-baseline text-slate-900">
-                  <span className="text-4xl font-extrabold tracking-tight">${plan.price}</span>
-                  <span className="ml-1 text-slate-500 font-medium">/ purchase</span>
-                </div>
+      <div className="grid md:grid-cols-3 gap-6 pt-6">
+        {plans.map((plan, i) => (
+          <div key={plan.id} className={`bg-white rounded-3xl p-8 border transition-all duration-300 relative flex flex-col ${i === 1 ? 'border-blue-500 shadow-2xl shadow-blue-500/20 scale-105 z-10' : 'border-gray-200 shadow-lg hover:shadow-xl hover:-translate-y-1'}`}>
+            {i === 1 && (
+              <div className="absolute -top-4 inset-x-0 flex justify-center">
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-extrabold uppercase tracking-widest py-1.5 px-4 rounded-full shadow-sm">
+                  Most Popular
+                </span>
               </div>
-
-              <div className="flex-1 mb-8">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6 flex justify-between items-center">
-                  <span className="text-slate-600 font-semibold">Credits Added</span>
-                  <span className="text-xl font-bold text-blue-600">{plan.allocated_credits}</span>
-                </div>
-                
-                <ul className="space-y-4">
-                  <li className="flex items-center text-slate-600 font-medium text-sm">
-                    <svg className="w-5 h-5 mr-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                    Full Performance Analytics
-                  </li>
-                  <li className="flex items-center text-slate-600 font-medium text-sm">
-                    <svg className="w-5 h-5 mr-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                    Access to Call Recordings
-                  </li>
-                </ul>
-              </div>
-
-              <button 
-                onClick={() => handlePurchase(plan.id)}
-                disabled={purchasingId !== null}
-                className={`w-full py-3.5 px-4 rounded-xl font-bold transition-all duration-200 flex justify-center items-center ${
-                  plan.name === 'Growth' 
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20' 
-                    : 'bg-slate-900 text-white hover:bg-slate-800'
-                } disabled:opacity-50`}
-              >
-                {purchasingId === plan.id ? (
-                   <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                ) : 'Pay Now'}
-              </button>
+            )}
+            
+            <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
+            <div className="mt-4 flex items-baseline text-5xl font-extrabold text-slate-900">
+              <span className="text-3xl mr-1 text-slate-400">$</span>
+              {plan.price}
             </div>
-          ))}
-        </div>
-      )}
+            <p className="text-slate-500 text-sm mt-2 font-medium">One-time payment</p>
+
+            <ul className="mt-8 space-y-4 flex-1">
+              <li className="flex items-center text-slate-700 font-medium">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <span className="font-extrabold text-slate-900 mr-1">{plan.allocated_credits}</span> AI Minutes
+              </li>
+              <li className="flex items-center text-slate-600">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                Full Analytics & Recordings
+              </li>
+              <li className="flex items-center text-slate-600">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                Premium Support
+              </li>
+            </ul>
+
+            <button 
+              onClick={() => handlePayment(plan)}
+              disabled={isProcessing}
+              className={`mt-8 w-full py-4 rounded-xl font-bold text-sm transition-all ${
+                i === 1 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/30' 
+                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+              } disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center`}
+            >
+              {isProcessing ? 'Processing...' : `Buy ${plan.allocated_credits} Minutes`}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
