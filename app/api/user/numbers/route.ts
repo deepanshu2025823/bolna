@@ -28,28 +28,42 @@ export async function GET() {
 
     if (userRow.length === 0) return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
 
-    const simulatedNumbers = [
-      { 
-        id: 'num_v8x9a1', 
-        phone: '+1 (415) 555-8932', 
-        type: 'Inbound & Outbound', 
-        status: 'Active', 
-        agent: 'Sales AI Pilot',
-        purchased_on: '2026-02-15T10:00:00Z'
-      },
-      { 
-        id: 'num_k2m5p9', 
-        phone: '+44 7700 900122', 
-        type: 'Outbound Only', 
-        status: 'Active', 
-        agent: 'Customer Support Bot',
-        purchased_on: '2026-02-28T14:30:00Z'
-      }
-    ];
+    const bolnaApiKey = process.env.BOLNA_API_KEY;
 
-    return NextResponse.json({ success: true, data: simulatedNumbers });
+    if (!bolnaApiKey) {
+      return NextResponse.json({ success: false, message: 'Bolna API Key is missing in .env' }, { status: 500 });
+    }
+
+    const response = await fetch('https://api.bolna.dev/v1/phone_numbers', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${bolnaApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Bolna API Error:', errorText);
+      return NextResponse.json({ success: true, data: [] }); 
+    }
+
+    const bolnaData = await response.json();
+    
+    const rawNumbers = Array.isArray(bolnaData) ? bolnaData : (bolnaData.data || []);
+
+    const mappedNumbers = rawNumbers.map((num: any) => ({
+      id: num.id || `num_${Math.random().toString(36).substring(7)}`,
+      phone: num.phone_number || num.number || 'Unknown Number',
+      type: num.type || 'Inbound & Outbound',
+      status: num.status || 'Active',
+      agent: num.agent_id ? 'Assigned to Agent' : 'Unassigned',
+      purchased_on: num.created_at || new Date().toISOString()
+    }));
+
+    return NextResponse.json({ success: true, data: mappedNumbers });
   } catch (error: any) {
     console.error('Numbers API Error:', error);
-    return NextResponse.json({ success: false, message: 'Failed to fetch phone numbers' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Failed to fetch phone numbers from Bolna' }, { status: 500 });
   }
 }
