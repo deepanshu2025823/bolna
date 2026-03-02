@@ -24,8 +24,9 @@ export async function GET() {
     if (!userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
     const connection = await pool.getConnection();
+    
     const [users]: any = await connection.query(`
-      SELECT u.id, u.name, u.email, u.bolna_sub_account_id, w.balance 
+      SELECT u.id, u.name, u.email, u.role, u.designation, u.bolna_sub_account_id, w.balance 
       FROM users u 
       LEFT JOIN wallets w ON u.id = w.user_id 
       WHERE u.id = ?
@@ -50,9 +51,18 @@ export async function PUT(request: Request) {
     const connection = await pool.getConnection();
 
     if (tab === 'profile') {
+      if (!name || name.trim() === '') {
+        connection.release();
+        return NextResponse.json({ success: false, message: 'Name cannot be empty.' }, { status: 400 });
+      }
       await connection.query('UPDATE users SET name = ? WHERE id = ?', [name, userId]);
       
     } else if (tab === 'security') {
+      if (!currentPassword || !newPassword) {
+        connection.release();
+        return NextResponse.json({ success: false, message: 'Both current and new passwords are required.' }, { status: 400 });
+      }
+
       const [users]: any = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);
       const validPassword = await bcrypt.compare(currentPassword, users[0].password);
       
@@ -63,6 +73,9 @@ export async function PUT(request: Request) {
 
       const hashedNewPassword = await bcrypt.hash(newPassword, 10);
       await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, userId]);
+    } else {
+      connection.release();
+      return NextResponse.json({ success: false, message: 'Invalid update request.' }, { status: 400 });
     }
 
     connection.release();
