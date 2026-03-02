@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           <p>Thank you for your business!</p>
         </div>
       `;
-      await sendEmail(users[0].email, `Payment Receipt - ${minutesToAdd} Minutes Added`, emailHtml);
+      await sendEmail(users[0].email, `Payment Receipt - ${minutesToAdd} Minutes Added`, '', emailHtml);
     }
 
     return NextResponse.json({ success: true, message: 'Payment verified and minutes added!' });
