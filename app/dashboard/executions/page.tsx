@@ -8,7 +8,13 @@ export default function CallExecutions() {
   const [logs, setLogs] = useState<any[]>([]);
   const [hasBalance, setHasBalance] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Statuses');
+  const [timeFilter, setTimeFilter] = useState('All Time');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchExecutions = async () => {
@@ -60,10 +66,30 @@ export default function CallExecutions() {
     );
   }
 
-  const filteredLogs = logs.filter(log => 
+  let processedLogs = logs.filter(log => 
     log.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
     log.phone.includes(searchTerm)
   );
+
+  if (statusFilter !== 'All Statuses') {
+    processedLogs = processedLogs.filter(log => log.status === statusFilter);
+  }
+
+  if (timeFilter !== 'All Time') {
+    const now = new Date();
+    const daysToSubtract = timeFilter === 'Last 7 Days' ? 7 : 30;
+    const cutoffDate = new Date(now.setDate(now.getDate() - daysToSubtract));
+    
+    processedLogs = processedLogs.filter(log => {
+      const logDate = new Date(log.time);
+      return logDate >= cutoffDate;
+    });
+  }
+
+  const totalPages = Math.ceil(processedLogs.length / itemsPerPage) || 1;
+  if (currentPage > totalPages) setCurrentPage(1); 
+  
+  const currentLogs = processedLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
@@ -82,6 +108,7 @@ export default function CallExecutions() {
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-5 border-b border-gray-100 bg-slate-50/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+          
           <div className="relative w-full sm:w-96">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -91,20 +118,28 @@ export default function CallExecutions() {
               placeholder="Search by Execution ID or Phone..." 
               className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(1);}}
             />
           </div>
           
           <div className="flex items-center space-x-3 w-full sm:w-auto">
-            <select className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer text-slate-700 w-full sm:w-auto">
-              <option>All Statuses</option>
-              <option>Completed</option>
-              <option>Failed</option>
+            <select 
+              value={statusFilter}
+              onChange={(e) => {setStatusFilter(e.target.value); setCurrentPage(1);}}
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer text-slate-700 w-full sm:w-auto"
+            >
+              <option value="All Statuses">All Statuses</option>
+              <option value="Completed">Completed</option>
+              <option value="Failed">Failed</option>
             </select>
-            <select className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer text-slate-700 w-full sm:w-auto">
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>All Time</option>
+            <select 
+              value={timeFilter}
+              onChange={(e) => {setTimeFilter(e.target.value); setCurrentPage(1);}}
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer text-slate-700 w-full sm:w-auto"
+            >
+              <option value="All Time">All Time</option>
+              <option value="Last 7 Days">Last 7 Days</option>
+              <option value="Last 30 Days">Last 30 Days</option>
             </select>
           </div>
         </div>
@@ -124,17 +159,17 @@ export default function CallExecutions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredLogs.length === 0 ? (
+              {currentLogs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-slate-500 font-medium">
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
                       <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                     </div>
-                    No call executions found yet.
+                    No call executions found matching your filters.
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log, index) => (
+                currentLogs.map((log, index) => (
                   <tr key={index} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4 font-mono text-slate-700 font-medium flex items-center">
                       {log.id}
@@ -168,13 +203,29 @@ export default function CallExecutions() {
           </table>
         </div>
 
-        {filteredLogs.length > 0 && (
-          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-slate-500">
-            <p>Showing {filteredLogs.length} execution(s)</p>
+        {processedLogs.length > 0 && (
+          <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between text-sm text-slate-500 gap-3">
+            <p>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, processedLogs.length)} of {processedLogs.length} execution(s)</p>
             <div className="flex space-x-1">
-              <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">Previous</button>
-              <button className="px-3 py-1.5 border border-gray-200 rounded-lg bg-blue-50 text-blue-600 font-bold">1</button>
-              <button className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Next</button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              
+              <button className="px-3 py-1.5 border border-gray-200 rounded-lg bg-blue-50 text-blue-600 font-bold">
+                {currentPage}
+              </button>
+
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
             </div>
           </div>
         )}
