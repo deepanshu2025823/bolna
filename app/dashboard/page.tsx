@@ -72,8 +72,8 @@ export default function ClientDashboard() {
            <svg className="w-16 h-16 text-red-100 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
            </svg>
-           <h3 className="text-xl font-bold text-slate-900 mb-2">Insufficient Credits</h3>
-           <p className="text-slate-500 mb-6 max-w-md mx-auto">Your wallet balance is $0.00. You need active credits to execute calls and view performance metrics. Please purchase a plan to continue.</p>
+           <h3 className="text-xl font-bold text-slate-900 mb-2">Insufficient Minutes</h3>
+           <p className="text-slate-500 mb-6 max-w-md mx-auto">Your available balance is 0 Minutes. You need active minutes to execute calls and view performance metrics. Please purchase a plan to continue.</p>
            <Link href="/dashboard/plans" className="inline-flex items-center px-6 py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20">
              View Subscription Plans
              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
@@ -92,16 +92,16 @@ export default function ClientDashboard() {
                 <p className="text-sm font-semibold text-slate-500">Total Executions</p>
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900">{metrics?.totalExecutions}</p>
+              <p className="text-3xl font-extrabold text-slate-900">{metrics?.totalExecutions || 0}</p>
               <p className="text-xs text-slate-400 mt-1">All call attempts</p>
             </div>
             
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-start mb-2">
-                <p className="text-sm font-semibold text-slate-500">Total Cost</p>
+                <p className="text-sm font-semibold text-slate-500">Minutes Used</p>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900">${metrics?.totalCost}</p>
-              <p className="text-xs text-slate-400 mt-1">Total campaign spend</p>
+              <p className="text-3xl font-extrabold text-slate-900">{metrics?.totalDuration ? Math.floor(metrics.totalDuration / 60) : 0} Mins</p>
+              <p className="text-xs text-slate-400 mt-1">Total campaign time</p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -109,30 +109,30 @@ export default function ClientDashboard() {
                 <p className="text-sm font-semibold text-slate-500">Total Duration</p>
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900">{metrics?.totalDuration}s</p>
-              <p className="text-xs text-slate-400 mt-1">Total call time</p>
+              <p className="text-3xl font-extrabold text-slate-900">{metrics?.totalDuration || '0.0'}s</p>
+              <p className="text-xs text-slate-400 mt-1">Exact seconds billed</p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <p className="text-sm font-semibold text-slate-500 mb-3">Status Breakdown</p>
               <div className="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-100">
-                Completed <span className="ml-2 text-emerald-500 bg-white px-2 rounded-md shadow-sm">{metrics?.completedCount}</span>
+                Completed <span className="ml-2 text-emerald-500 bg-white px-2 rounded-md shadow-sm">{metrics?.completedCount || 0}</span>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-              <p className="text-sm font-semibold text-slate-500 mb-2">Avg Cost</p>
-              <p className="text-3xl font-extrabold text-slate-900">${metrics?.avgCost}</p>
-              <p className="text-xs text-slate-400 mt-1">Average cost per call</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">Avg Minutes/Call</p>
+              <p className="text-3xl font-extrabold text-slate-900">{metrics?.avgDuration ? (metrics.avgDuration / 60).toFixed(2) : '0.00'} Mins</p>
+              <p className="text-xs text-slate-400 mt-1">Average minutes deducted per call</p>
             </div>
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-start mb-2">
                 <p className="text-sm font-semibold text-slate-500">Avg Duration</p>
                 <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900">{metrics?.avgDuration}s</p>
+              <p className="text-3xl font-extrabold text-slate-900">{metrics?.avgDuration || '0.0'}s</p>
               <p className="text-xs text-slate-400 mt-1">Average call length</p>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function ClientDashboard() {
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Duration (s)</th>
                     <th className="px-4 py-3">Timestamp</th>
-                    <th className="px-4 py-3">Cost</th>
+                    <th className="px-4 py-3">Minutes Deducted</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Conversation Data</th>
                   </tr>
@@ -166,9 +166,9 @@ export default function ClientDashboard() {
                       <td className="px-4 py-3 text-slate-600">{log.type}</td>
                       <td className="px-4 py-3 text-slate-600">{log.duration}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs">{log.time}</td>
-                      <td className="px-4 py-3 text-slate-600">{log.cost}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">{(log.duration / 60).toFixed(2)} Mins</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-md text-xs font-bold border ${log.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                        <span className={`px-2 py-1 rounded-md text-xs font-bold border ${log.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                           {log.status}
                         </span>
                       </td>
