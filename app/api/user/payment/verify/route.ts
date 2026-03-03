@@ -21,15 +21,15 @@ async function getUserId() {
 
 export async function POST(request: Request) {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, minutesToAdd, planName } = await request.json();
+    const { razorpay_subscription_id, razorpay_payment_id, razorpay_signature, minutesToAdd, planName } = await request.json();
     const userId = await getUserId();
     
     if (!userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const bodyStr = razorpay_payment_id + "|" + razorpay_subscription_id;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-      .update(body.toString())
+      .update(bodyStr.toString())
       .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     
     await connection.query(
       'UPDATE transactions SET status = ?, razorpay_payment_id = ? WHERE razorpay_order_id = ?',
-      ['success', razorpay_payment_id, razorpay_order_id]
+      ['success', razorpay_payment_id, razorpay_subscription_id]
     );
 
     await connection.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [minutesToAdd, userId]);
@@ -51,19 +51,19 @@ export async function POST(request: Request) {
     if (users.length > 0) {
       const emailHtml = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #2563eb;">Payment Successful! 🎉</h2>
+          <h2 style="color: #2563eb;">Subscription Successful! 🎉</h2>
           <p>Hi ${users[0].name},</p>
-          <p>Your payment for the <strong>${planName}</strong> plan was successful.</p>
+          <p>Your Auto-pay Subscription for the <strong>${planName}</strong> plan is now active.</p>
           <p><strong>${minutesToAdd} Minutes</strong> have been instantly credited to your AI Portal account.</p>
-          <p>Transaction ID: ${razorpay_payment_id}</p>
+          <p>Subscription ID: ${razorpay_subscription_id}</p>
           <br/>
-          <p>Thank you for your business!</p>
+          <p>Your plan will auto-renew next month. Thank you!</p>
         </div>
       `;
-      await sendEmail(users[0].email, `Payment Receipt - ${minutesToAdd} Minutes Added`, '', emailHtml);
+      await sendEmail(users[0].email, `Subscription Active - ${minutesToAdd} Minutes Added`, '', emailHtml);
     }
 
-    return NextResponse.json({ success: true, message: 'Payment verified and minutes added!' });
+    return NextResponse.json({ success: true, message: 'Subscription active and minutes added!' });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: 'Verification failed' }, { status: 500 });
   }

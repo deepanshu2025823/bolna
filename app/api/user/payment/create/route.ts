@@ -21,12 +21,9 @@ async function getUserId() {
 export async function POST(request: Request) {
   try {
     const userId = await getUserId();
-    if (!userId) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    if (!userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.error("CRITICAL: Razorpay keys are missing!");
       return NextResponse.json({ success: false, message: "Server configuration error" }, { status: 500 });
     }
 
@@ -37,34 +34,42 @@ export async function POST(request: Request) {
 
     const body = await request.json(); 
     const amount = Number(body.amount);
-    const planName = body.planName || 'Custom Plan';
-    
-    if (!amount || isNaN(amount)) {
-      return NextResponse.json({ success: false, message: "Invalid amount provided." }, { status: 400 });
+    const planName = body.planName || 'Basic';
+    const minutesToAdd = body.minutesToAdd || 0;
+
+    let rzpPlanId = '';
+    if (planName.toLowerCase().includes('basic')) {
+      rzpPlanId = 'plan_SMt2tNCwLdFR4b';
+    } else if (planName.toLowerCase().includes('growth')) {
+      rzpPlanId = 'plan_SMt481DFct7vO0';
+    } else if (planName.toLowerCase().includes('premium')) {
+      rzpPlanId = 'plan_SMt4kgOzJ6gso4';
+    } else {
+      return NextResponse.json({ success: false, message: "Invalid Plan Configuration" }, { status: 400 });
     }
 
-    const amountInINR = Math.round(amount * 83); 
-    const amountInPaise = amountInINR * 100;
-
-    const options = {
-      amount: amountInPaise,
-      currency: 'INR',
-      receipt: `rcpt_${Date.now()}`,
-    };
-
-    const order = await razorpay.orders.create(options);
+    const subscription = await razorpay.subscriptions.create({
+      plan_id: rzpPlanId,
+      customer_notify: 1,
+      total_count: 120, 
+      notes: {
+        userId: userId.toString(),
+        planName: planName,
+        minutesToAdd: minutesToAdd.toString()
+      }
+    });
 
     const connection = await pool.getConnection();
     await connection.query(
       'INSERT INTO transactions (user_id, razorpay_order_id, plan_name, amount, status) VALUES (?, ?, ?, ?, ?)',
-      [userId, order.id, planName, amount, 'pending']
+      [userId, subscription.id, planName, amount, 'pending']
     );
     connection.release();
 
-    return NextResponse.json({ success: true, order });
+    return NextResponse.json({ success: true, subscription });
     
   } catch (error: any) {
-    console.error("Razorpay Create Order Error:", error);
+    console.error("Razorpay Subscription Error:", error);
     return NextResponse.json({ success: false, message: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
