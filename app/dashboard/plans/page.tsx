@@ -8,6 +8,8 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -46,7 +48,7 @@ export default function PlansPage() {
         amount: orderData.order.amount,
         currency: orderData.order.currency,
         name: 'AI Portal Pro',
-        description: `Purchase ${plan.name} Plan`,
+        description: `Purchase ${plan.name} Plan ${isAutoPlayEnabled ? '(Auto-Renewing)' : ''}`,
         order_id: orderData.order.id,
         handler: async function (response: any) {
           const verifyRes = await fetch('/api/user/payment/verify', {
@@ -102,29 +104,54 @@ export default function PlansPage() {
       <div className="text-center max-w-2xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Simple, Transparent Pricing</h2>
         <p className="text-slate-500 mt-3 font-medium text-lg">Top up your wallet with minutes to execute AI calls. No hidden fees.</p>
+        
+        <div className="mt-8 flex items-center justify-center">
+          <div className="flex items-center space-x-3 bg-white px-5 py-2.5 rounded-full shadow-sm border border-gray-200">
+            <span className={`text-sm font-bold ${!isAutoPlayEnabled ? 'text-slate-900' : 'text-slate-400'}`}>Pay Once</span>
+            <button 
+              onClick={() => setIsAutoPlayEnabled(!isAutoPlayEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isAutoPlayEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoPlayEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+            <span className={`text-sm font-bold flex items-center ${isAutoPlayEnabled ? 'text-slate-900' : 'text-slate-400'}`}>
+              Auto-pay (Monthly)
+              <span className="ml-2 bg-emerald-100 text-emerald-700 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md font-extrabold">Save 10%</span>
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 pt-6">
         {plans.map((plan, i) => {
           const isThisProcessing = processingId === plan.id;
           const isAnyProcessing = processingId !== null;
+          
+          const displayPrice = isAutoPlayEnabled ? (plan.price * 0.9).toFixed(2) : plan.price;
 
           return (
             <div key={plan.id} className={`bg-white rounded-3xl p-8 border transition-all duration-300 relative flex flex-col ${i === 1 ? 'border-blue-500 shadow-2xl shadow-blue-500/20 scale-105 z-10' : 'border-gray-200 shadow-lg hover:shadow-xl hover:-translate-y-1'}`}>
               {i === 1 && (
                 <div className="absolute -top-4 inset-x-0 flex justify-center">
-                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-extrabold uppercase tracking-widest py-1.5 px-4 rounded-full shadow-sm">
-                    Most Popular
+                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-extrabold uppercase tracking-widest py-1.5 px-4 rounded-full shadow-sm flex items-center">
+                    <svg className="w-3.5 h-3.5 mr-1 text-yellow-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    Recommended
                   </span>
                 </div>
               )}
               
               <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
-              <div className="mt-4 flex items-baseline text-5xl font-extrabold text-slate-900">
-                <span className="text-3xl mr-1 text-slate-400">$</span>
-                {plan.price}
+              <div className="mt-4 flex items-end">
+                <span className="text-4xl font-extrabold text-slate-900"><span className="text-3xl mr-1 text-slate-400">$</span>{displayPrice}</span>
+                <span className="text-slate-500 font-medium ml-2 mb-1">/ month</span>
               </div>
-              <p className="text-slate-500 text-sm mt-2 font-medium">One-time payment</p>
+              
+              {isAutoPlayEnabled && (
+                <p className="text-emerald-600 text-xs font-bold mt-2">Billed monthly (Cancel anytime)</p>
+              )}
+              {!isAutoPlayEnabled && (
+                <p className="text-slate-500 text-xs font-medium mt-2">Billed once</p>
+              )}
 
               <ul className="mt-8 space-y-4 flex-1">
                 <li className="flex items-center text-slate-800 font-bold">
@@ -162,7 +189,7 @@ export default function PlansPage() {
                     Processing...
                   </>
                 ) : (
-                  `Buy ${plan.allocated_credits} Minutes`
+                  isAutoPlayEnabled ? `Subscribe for $${displayPrice}` : `Buy ${plan.allocated_credits} Minutes`
                 )}
               </button>
             </div>
