@@ -38,14 +38,16 @@ export async function POST(request: Request) {
     const minutesToAdd = body.minutesToAdd || 0;
 
     let rzpPlanId = '';
-    if (planName.toLowerCase().includes('basic')) {
+    const nameLower = planName.toLowerCase();
+    
+    if (nameLower.includes('basic')) {
       rzpPlanId = 'plan_SMt2tNCwLdFR4b';
-    } else if (planName.toLowerCase().includes('growth')) {
+    } else if (nameLower.includes('growth')) {
       rzpPlanId = 'plan_SMt481DFct7vO0';
-    } else if (planName.toLowerCase().includes('premium')) {
+    } else if (nameLower.includes('premium')) {
       rzpPlanId = 'plan_SMt4kgOzJ6gso4';
     } else {
-      return NextResponse.json({ success: false, message: "Invalid Plan Configuration" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Invalid Plan Configuration. Plan name must contain Basic, Growth, or Premium." }, { status: 400 });
     }
 
     const subscription = await razorpay.subscriptions.create({

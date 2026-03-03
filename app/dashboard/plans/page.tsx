@@ -9,7 +9,6 @@ export default function PlansPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
-  // Client Requirement: Always keep it on Auto-play (Monthly)
   const isAutoPlayEnabled = true;
 
   useEffect(() => {
@@ -34,29 +33,31 @@ export default function PlansPage() {
       const res = await fetch('/api/user/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: plan.price, planName: plan.name }) 
+        body: JSON.stringify({ 
+          amount: plan.price, 
+          planName: plan.name,
+          minutesToAdd: plan.allocated_credits 
+        }) 
       });
       const orderData = await res.json();
 
       if (!orderData.success) {
-        alert('Failed to initialize payment.');
+        alert('Failed to initialize subscription: ' + (orderData.message || 'Error'));
         setProcessingId(null);
         return;
       }
 
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_SMPZWp9Km7zQyf', 
-        amount: orderData.order.amount,
-        currency: orderData.order.currency,
         name: 'AI Portal Pro',
-        description: `Purchase ${plan.name} Plan (Auto-Renewing)`, // Description set for auto-renewal
-        order_id: orderData.order.id,
+        description: `Subscribe to ${plan.name} Plan (Auto-Renewing)`, 
+        subscription_id: orderData.subscription.id, 
         handler: async function (response: any) {
           const verifyRes = await fetch('/api/user/payment/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
+              razorpay_subscription_id: response.razorpay_subscription_id, 
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               minutesToAdd: plan.allocated_credits,
@@ -65,10 +66,10 @@ export default function PlansPage() {
           });
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            alert(`Success! ${plan.allocated_credits} Minutes added to your wallet.`);
+            alert(`Success! Auto-pay activated and ${plan.allocated_credits} Minutes added to your wallet.`);
             window.location.href = '/dashboard';
           } else {
-            alert('Payment verification failed.');
+            alert('Subscription verification failed.');
             setProcessingId(null);
           }
         },
@@ -90,7 +91,7 @@ export default function PlansPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              razorpay_order_id: response.error.metadata.order_id,
+              razorpay_order_id: orderData.subscription.id,
               razorpay_payment_id: response.error.metadata.payment_id,
               reason: response.error.description
             })
@@ -123,7 +124,6 @@ export default function PlansPage() {
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Simple, Transparent Pricing</h2>
         <p className="text-slate-500 mt-3 font-medium text-lg">Top up your wallet with minutes to execute AI calls. No hidden fees.</p>
         
-        {/* Toggle Removed - Always Monthly Design Below */}
         <div className="mt-8 flex items-center justify-center">
           <div className="flex items-center space-x-3 bg-blue-50 px-5 py-2.5 rounded-full shadow-sm border border-blue-100">
             <span className="text-sm font-bold flex items-center text-blue-700">
@@ -139,7 +139,6 @@ export default function PlansPage() {
           const isThisProcessing = processingId === plan.id;
           const isAnyProcessing = processingId !== null;
           
-          // Apply 10% discount visually since it's forced Monthly
           const displayPrice = (plan.price * 0.9).toFixed(2);
 
           return (

@@ -57,7 +57,7 @@ export async function POST(request: Request) {
           <p><strong>${minutesToAdd} Minutes</strong> have been instantly credited to your AI Portal account.</p>
           <p>Subscription ID: ${razorpay_subscription_id}</p>
           <br/>
-          <p>Your plan will auto-renew next month. Thank you!</p>
+          <p>Your plan will auto-renew next month. Thank you for your business!</p>
         </div>
       `;
       await sendEmail(users[0].email, `Subscription Active - ${minutesToAdd} Minutes Added`, '', emailHtml);
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: 'Subscription active and minutes added!' });
   } catch (error: any) {
+    console.error("Verification error:", error);
     return NextResponse.json({ success: false, message: 'Verification failed' }, { status: 500 });
   }
 }

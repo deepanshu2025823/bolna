@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       connection.release();
     }
 
-    return NextResponse.json({ success: true, message: 'Failure logged' });
+    return NextResponse.json({ success: true, message: 'Failure logged successfully' });
   } catch (error: any) {
     console.error("Log failure error:", error);
     return NextResponse.json({ success: false, message: 'Failed to log error' }, { status: 500 });
