@@ -48,6 +48,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       try {
         const res = await fetch('/api/user/profile');
         const data = await res.json();
+        
         if (data.success) {
           setUserProfile(data.data);
         } else {
@@ -82,19 +83,55 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const isRestricted = userProfile && Number(userProfile.balance) <= 0;
 
-  const renderPortalName = (name: string) => {
-    if (name.toUpperCase() === 'HIGHVANCE') {
+  const renderClientBranding = () => {
+    if (userProfile?.logo_url) {
       return (
-        <span className="text-xl font-extrabold tracking-tight uppercase">
-          <span className="text-slate-900">HIGH</span>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">VANCE</span>
-        </span>
+        <img 
+          src={userProfile.logo_url} 
+          alt="Client Logo" 
+          className="h-8 max-w-[180px] object-contain"
+        />
       );
     }
+    
+    if (userProfile?.company_name) {
+      return (
+        <>
+          <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20 shrink-0">
+            <span className="text-white font-extrabold text-sm">{userProfile.company_name.charAt(0).toUpperCase()}</span>
+          </div>
+          <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase truncate">
+            {userProfile.company_name}
+          </span>
+        </>
+      );
+    }
+
+    const nameToRender = portalName || 'HIGHVANCE';
+    
+    if (nameToRender.toUpperCase() === 'HIGHVANCE') {
+      return (
+        <>
+          <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20 shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </div>
+          <span className="text-xl font-extrabold tracking-tight uppercase truncate">
+            <span className="text-slate-900">HIGH</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">VANCE</span>
+          </span>
+        </>
+      );
+    }
+
     return (
-      <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase">
-        {name}
-      </span>
+      <>
+        <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20 shrink-0">
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </div>
+        <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase truncate">
+          {nameToRender}
+        </span>
+      </>
     );
   };
 
@@ -114,13 +151,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         } flex flex-col shadow-2xl lg:shadow-none`}
       >
         <div className="h-20 flex items-center px-6 border-b border-gray-100">
-          <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          {/* DYNAMIC LOGO CALL */}
-          {renderPortalName(portalName)}
+          {renderClientBranding()}
         </div>
 
         {userProfile && (
