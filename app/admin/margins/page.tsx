@@ -4,35 +4,44 @@
 import { useState, useEffect } from 'react';
 
 export default function MarginTracking() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchMargins = async () => {
       try {
-        const res = await fetch('/api/admin/users');
-        const data = await res.json();
-        if (data.success) setUsers(data.data);
+        const res = await fetch('/api/admin/margins');
+        const json = await res.json();
+        if (json.success) {
+          setData(json.data);
+        }
       } catch (error) {
-        console.error('Failed to fetch users');
+        console.error('Failed to fetch margin data');
       }
       setIsLoading(false);
     };
-    fetchUsers();
+    fetchMargins();
   }, []);
 
-  // FULLY DYNAMIC CALCULATIONS (No hardcoded +1250 base values)
-  const totalRevenue = users.reduce((acc, user) => {
-    const balance = Number(user.balance) || 0;
-    return acc + (balance > 0 ? balance * 2.5 : 0); // Logic: $2.5 revenue generated per credit in wallet
-  }, 0); 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <svg className="animate-spin h-10 w-10 text-emerald-600" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+    );
+  }
 
-  const totalBolnaCost = totalRevenue * 0.18; // Logic: Bolna API consumes ~18% of revenue
-  const netProfit = totalRevenue - totalBolnaCost;
-  const marginPercentage = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
+  const totalRevenue = data?.totalRevenue || 0;
+  const totalBolnaCost = data?.totalBolnaCost || 0;
+  const netProfit = data?.netProfit || 0;
+  const marginPercentage = data?.marginPercentage || '0.0';
+  const clients = data?.clientData || [];
 
   return (
-    <div className="space-y-6 sm:space-y-8 font-sans">
+    <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
       
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full blur-3xl opacity-50 pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
@@ -41,12 +50,12 @@ export default function MarginTracking() {
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Margin & Profit <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">Tracking</span>
           </h2>
-          <p className="text-slate-500 text-sm sm:text-base mt-1.5 font-medium">Monitor your revenue versus Bolna API execution costs in real-time.</p>
+          <p className="text-slate-500 text-sm sm:text-base mt-1.5 font-medium">Real-time revenue versus Bolna API execution costs based on actual agent usage.</p>
         </div>
         
         <div className="relative z-10 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl border border-emerald-100 font-bold text-sm flex items-center shadow-sm">
           <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
-          Live Analytics
+          Live Sync Active
         </div>
       </div>
 
@@ -57,9 +66,9 @@ export default function MarginTracking() {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
           </div>
-          <h3 className="text-sm font-semibold text-slate-500 mb-1">Total Client Revenue</h3>
+          <h3 className="text-sm font-semibold text-slate-500 mb-1">Total Value Generated</h3>
           <p className="text-3xl font-extrabold text-slate-900">${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-          <p className="text-xs text-slate-400 mt-2 font-medium">Funds added by clients</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium">From consumed minutes</p>
         </div>
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -82,7 +91,7 @@ export default function MarginTracking() {
           </div>
           <h3 className="text-sm font-semibold text-slate-500 mb-1 relative z-10">Net Profit</h3>
           <p className="text-3xl font-extrabold text-emerald-600 relative z-10">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-          <p className="text-xs text-slate-400 mt-2 font-medium relative z-10">Your clear earnings</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium relative z-10">Clear agency earnings</p>
         </div>
 
         <div className="bg-slate-900 p-6 rounded-3xl shadow-lg border border-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
@@ -96,14 +105,13 @@ export default function MarginTracking() {
           <p className="text-3xl font-extrabold text-white relative z-10">{marginPercentage}%</p>
           <p className="text-xs text-slate-400 mt-2 font-medium relative z-10">Highly profitable</p>
         </div>
-
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h3 className="font-bold text-slate-900 text-[14px] md:text-1xl">Client Profitability Report</h3>
-            <p className="text-[10px] md:text-base text-slate-500 font-medium mt-0.5">Breakdown of margins per active client</p>
+            <h3 className="font-bold text-slate-900 text-[14px] md:text-xl">Client User Base</h3>
+            <p className="text-[10px] md:text-sm text-slate-500 font-medium mt-0.5">List of clients and their available wallet balances</p>
           </div>
           <button className="text-[10px] md:text-sm bg-white border border-gray-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
             Export CSV
@@ -114,55 +122,42 @@ export default function MarginTracking() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100 bg-white">
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Plan Revenue</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Est. Bolna Cost</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Net Profit</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Margin %</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Client Name</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Joined Date</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Minutes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">Calculating margins...</td></tr>
-              ) : users.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">No client data available to calculate margins.</td></tr>
+              {clients.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-medium">No client data available.</td></tr>
               ) : (
-                users.map((user) => {
-                  const balance = Number(user.balance) || 0;
-                  const clientRev = balance > 0 ? balance * 2.5 : 0;
-                  const clientCost = clientRev * 0.18;
-                  const clientProfit = clientRev - clientCost;
-                  const clientMargin = clientRev > 0 ? Number(((clientProfit / clientRev) * 100).toFixed(0)) : 0;
-
-                  return (
-                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-bold text-slate-900">{user.name}</p>
-                        <p className="text-xs font-medium text-slate-500">{user.email}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-700">
-                        ${clientRev > 0 ? clientRev.toFixed(2) : '0.00'}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-red-600">
-                        ${clientCost > 0 ? clientCost.toFixed(2) : '0.00'}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-extrabold text-emerald-600">
-                        ${clientProfit > 0 ? clientProfit.toFixed(2) : '0.00'}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${clientMargin > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-500'}`}>
-                          {clientMargin}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                clients.map((user: any) => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs mr-3">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <p className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{user.name}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-500">{user.email}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-600">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        {Math.floor(Number(user.balance) || 0)} Mins
+                      </span>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
-
     </div>
   );
 }
