@@ -12,6 +12,8 @@ export default function AdminSettings() {
   const [generalData, setGeneralData] = useState({ portal_name: '', support_email: '', admin_name: '' });
   const [apiData, setApiData] = useState({ bolna_api_key: '' });
   const [securityData, setSecurityData] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  
+  const [domainData, setDomainData] = useState({ custom_domain: '' });
 
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -28,6 +30,9 @@ export default function AdminSettings() {
           });
           setApiData({
             bolna_api_key: data.data.settings?.bolna_api_key || ''
+          });
+          setDomainData({
+            custom_domain: '' 
           });
         }
       } catch (error) {
@@ -51,6 +56,11 @@ export default function AdminSettings() {
         setStatusMsg({ type: 'error', text: 'Password must be at least 6 characters long.' });
         return;
       }
+    }
+
+    if (tab === 'domain') {
+      setStatusMsg({ type: 'success', text: 'Domain configuration instructions generated below!' });
+      return; 
     }
 
     setIsSaving(true);
@@ -87,6 +97,25 @@ export default function AdminSettings() {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
+  const copyToClipboard = () => {
+    const code = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${generalData.portal_name}</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <iframe src="https://bolna-pi.vercel.app"></iframe>
+</body>
+</html>`;
+    navigator.clipboard.writeText(code);
+    alert('Code copied to clipboard!');
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
@@ -104,7 +133,7 @@ export default function AdminSettings() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Platform Settings</h2>
-          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage your portal configurations, API integrations, and security.</p>
+          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage your portal configurations, domains, and security.</p>
         </div>
       </div>
 
@@ -125,6 +154,13 @@ export default function AdminSettings() {
             >
               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               API Integrations
+            </button>
+            <button 
+              onClick={() => {setActiveTab('domain'); setStatusMsg(null);}} 
+              className={`flex items-center px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'domain' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            >
+              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+              Domain Setup
             </button>
             <button 
               onClick={() => {setActiveTab('security'); setStatusMsg(null);}} 
@@ -216,6 +252,63 @@ export default function AdminSettings() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {activeTab === 'domain' && (
+            <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-2' : ''}`}>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Custom Domain Mapping</h3>
+              <p className="text-sm text-slate-500 mb-6 font-medium">Link your Hostinger or external domain to this Vercel portal without complex DNS setup.</p>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Enter Your Custom Domain</label>
+                  <input 
+                    type="text" 
+                    value={domainData.custom_domain} 
+                    onChange={(e) => setDomainData({custom_domain: e.target.value})} 
+                    placeholder="e.g. www.highvance.com" 
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" 
+                  />
+                </div>
+
+                {domainData.custom_domain && (
+                  <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl animate-fade-in">
+                    <h4 className="font-bold text-blue-900 mb-2">Setup Instructions</h4>
+                    <p className="text-sm text-blue-800 mb-4 leading-relaxed">
+                      To show this portal on <strong>{domainData.custom_domain}</strong>, go to your Hostinger File Manager and create an <code>index.html</code> file with the exact code below. It will securely load your portal in fullscreen mode.
+                    </p>
+                    
+                    <div className="relative">
+                      <pre className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs overflow-x-auto font-mono">
+{`<!DOCTYPE html>
+<html>
+<head>
+    <title>${generalData.portal_name}</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <iframe src="https://bolna-pi.vercel.app"></iframe>
+</body>
+</html>`}
+                      </pre>
+                      <button 
+                        onClick={copyToClipboard}
+                        className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Copy Code
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-6 border-t border-gray-100">
+                  <p className="text-xs text-slate-500 italic">Note: This iFrame method is the fastest way to map domains without touching Vercel/Hostinger DNS records.</p>
+                </div>
+              </div>
             </div>
           )}
 
