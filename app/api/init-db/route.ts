@@ -21,13 +21,11 @@ export async function GET() {
 
     try {
       await connection.query("ALTER TABLE users ADD COLUMN designation VARCHAR(255) DEFAULT 'Staff'");
-    } catch (e) {
-    }
+    } catch (e) {}
 
     try {
       await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'client', 'staff') DEFAULT 'client'");
-    } catch (e) {
-    }
+    } catch (e) {}
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS plans (
@@ -35,9 +33,14 @@ export async function GET() {
         name VARCHAR(50) NOT NULL,
         price DECIMAL(10, 2) NOT NULL,
         allocated_credits INT NOT NULL,
+        features TEXT, 
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    try {
+      await connection.query("ALTER TABLE plans ADD COLUMN features TEXT");
+    } catch (e) {}
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS wallets (
@@ -83,19 +86,20 @@ export async function GET() {
 
     const [existingPlans]: any = await connection.query('SELECT COUNT(*) as count FROM plans');
     if (existingPlans[0].count === 0) {
+      const defaultFeatures = JSON.stringify(["Full Analytics", "Premium Support"]);
       await connection.query(`
-        INSERT INTO plans (name, price, allocated_credits) VALUES 
-        ('Basic', 49.99, 500),
-        ('Growth', 99.99, 1200),
-        ('Premium', 199.99, 3000)
-      `);
+        INSERT INTO plans (name, price, allocated_credits, features) VALUES 
+        ('Basic', 49.99, 500, ?),
+        ('Growth', 99.99, 1200, ?),
+        ('Premium', 199.99, 3000, ?)
+      `, [defaultFeatures, defaultFeatures, defaultFeatures]);
     }
 
     connection.release();
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Database tables, support chat schema, and default plans initialized successfully!' 
+      message: 'Database tables initialized successfully with dynamic features column!' 
     });
 
   } catch (error: any) {

@@ -14,10 +14,18 @@ export async function GET() {
     const [plans]: any = await connection.query('SELECT * FROM plans ORDER BY price ASC');
     connection.release();
 
-    const formattedPlans = plans.map((plan: any) => ({
-      ...plan,
-      features: plan.features ? JSON.parse(plan.features) : []
-    }));
+    const formattedPlans = plans.map((plan: any) => {
+      let parsedFeatures = [];
+      try {
+        parsedFeatures = plan.features ? JSON.parse(plan.features) : [];
+      } catch (err) {
+        parsedFeatures = [];
+      }
+      return {
+        ...plan,
+        features: parsedFeatures
+      };
+    });
 
     return NextResponse.json({ success: true, data: formattedPlans });
   } catch (error: any) {
@@ -30,7 +38,7 @@ export async function POST(request: Request) {
     const { name, price, allocated_credits, features } = await request.json();
     const connection = await pool.getConnection();
     
-    const featuresStr = JSON.stringify(features || []);
+    const featuresStr = JSON.stringify(Array.isArray(features) ? features : []);
 
     await connection.query(
       'INSERT INTO plans (name, price, allocated_credits, features) VALUES (?, ?, ?, ?)',
@@ -48,7 +56,7 @@ export async function PUT(request: Request) {
     const { id, name, price, allocated_credits, features } = await request.json();
     const connection = await pool.getConnection();
 
-    const featuresStr = JSON.stringify(features || []);
+    const featuresStr = JSON.stringify(Array.isArray(features) ? features : []);
 
     await connection.query(
       'UPDATE plans SET name = ?, price = ?, allocated_credits = ?, features = ? WHERE id = ?',
