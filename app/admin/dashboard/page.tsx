@@ -66,7 +66,6 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
       
-      {/* Header Banner */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full blur-3xl opacity-50 pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
         <div className="relative z-10">
@@ -83,7 +82,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Dynamic Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, index) => (
           <div key={index} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-slate-200/40 hover:-translate-y-1 transition-all duration-300 group">
@@ -105,7 +103,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Recent Dynamic Activity Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
         <div className="px-6 py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
           <div>

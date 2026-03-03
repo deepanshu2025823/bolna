@@ -23,19 +23,47 @@ export async function GET() {
 
     connection.release();
 
-    const totalRevenue = (totalBalance > 0 ? totalBalance * 2.5 : 0) + 1250;
-    const netProfit = totalRevenue - (totalRevenue * 0.18); 
-    
-    const totalExecutions = Math.floor(totalRevenue * 2.8);
-    const totalAIMinutes = Math.floor(totalRevenue * 1.2);
+    let totalExecutions = 0;
+    let totalAIMinutes = 0;
+    const bolnaApiKey = process.env.BOLNA_API_KEY;
+
+    if (bolnaApiKey) {
+      try {
+        const response = await fetch('https://api.bolna.dev/v1/executions', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${bolnaApiKey}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const bolnaData = await response.json();
+          const rawExecutions = Array.isArray(bolnaData) ? bolnaData : (bolnaData.data || []);
+          
+          totalExecutions = rawExecutions.length;
+          
+          let totalSeconds = 0;
+          rawExecutions.forEach((exec: any) => {
+            totalSeconds += (exec.duration || 0);
+          });
+          totalAIMinutes = Math.ceil(totalSeconds / 60);
+        }
+      } catch (apiError) {
+        console.error("Bolna API fetch failed in Admin Dashboard", apiError);
+      }
+    }
+
+    const marginPerMinute = 0.15; 
+    const netProfit = totalAIMinutes * marginPerMinute;
 
     return NextResponse.json({
       success: true,
       data: {
         totalClients,
-        totalExecutions,
-        totalAIMinutes,
-        netProfit,
+        totalExecutions,     
+        totalAIMinutes,      
+        netProfit,           
         recentActivity
       }
     });
