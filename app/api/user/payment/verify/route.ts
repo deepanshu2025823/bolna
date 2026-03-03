@@ -37,6 +37,12 @@ export async function POST(request: Request) {
     }
 
     const connection = await pool.getConnection();
+    
+    await connection.query(
+      'UPDATE transactions SET status = ?, razorpay_payment_id = ? WHERE razorpay_order_id = ?',
+      ['success', razorpay_payment_id, razorpay_order_id]
+    );
+
     await connection.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [minutesToAdd, userId]);
     
     const [users]: any = await connection.query('SELECT name, email FROM users WHERE id = ?', [userId]);
