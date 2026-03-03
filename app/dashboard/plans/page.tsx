@@ -7,7 +7,6 @@ import Script from 'next/script';
 export default function PlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -27,7 +26,7 @@ export default function PlansPage() {
   }, []);
 
   const handlePayment = async (plan: any) => {
-    setProcessingId(plan.id); 
+    setProcessingId(plan.id);
     try {
       const res = await fetch('/api/user/payment/create', {
         method: 'POST',
@@ -63,7 +62,7 @@ export default function PlansPage() {
           });
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            alert(`Success! ${plan.allocated_credits} Minutes added to your wallet. An email receipt has been sent.`);
+            alert(`Success! ${plan.allocated_credits} Minutes added to your wallet.`);
             window.location.href = '/dashboard';
           } else {
             alert('Payment verification failed.');
@@ -128,24 +127,21 @@ export default function PlansPage() {
               <p className="text-slate-500 text-sm mt-2 font-medium">One-time payment</p>
 
               <ul className="mt-8 space-y-4 flex-1">
-                <li className="flex items-center text-slate-700 font-medium">
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
+                <li className="flex items-center text-slate-800 font-bold">
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
                   </div>
-                  <span className="font-extrabold text-slate-900 mr-1">{plan.allocated_credits}</span> AI Minutes
+                  {plan.allocated_credits} AI Minutes
                 </li>
-                <li className="flex items-center text-slate-600">
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  Full Analytics & Recordings
-                </li>
-                <li className="flex items-center text-slate-600">
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  Premium Support
-                </li>
+                
+                {plan.features && plan.features.map((feature: string, idx: number) => (
+                  <li key={idx} className="flex items-start text-slate-600 font-medium">
+                    <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mr-3 shrink-0 mt-0.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    {feature}
+                  </li>
+                ))}
               </ul>
 
               <button 
