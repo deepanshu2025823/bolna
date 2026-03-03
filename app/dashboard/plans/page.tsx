@@ -8,8 +8,9 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  
-  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
+
+  // Client Requirement: Always keep it on Auto-play (Monthly)
+  const isAutoPlayEnabled = true;
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -48,7 +49,7 @@ export default function PlansPage() {
         amount: orderData.order.amount,
         currency: orderData.order.currency,
         name: 'AI Portal Pro',
-        description: `Purchase ${plan.name} Plan ${isAutoPlayEnabled ? '(Auto-Renewing)' : ''}`,
+        description: `Purchase ${plan.name} Plan (Auto-Renewing)`, // Description set for auto-renewal
         order_id: orderData.order.id,
         handler: async function (response: any) {
           const verifyRes = await fetch('/api/user/payment/verify', {
@@ -122,18 +123,12 @@ export default function PlansPage() {
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Simple, Transparent Pricing</h2>
         <p className="text-slate-500 mt-3 font-medium text-lg">Top up your wallet with minutes to execute AI calls. No hidden fees.</p>
         
+        {/* Toggle Removed - Always Monthly Design Below */}
         <div className="mt-8 flex items-center justify-center">
-          <div className="flex items-center space-x-3 bg-white px-5 py-2.5 rounded-full shadow-sm border border-gray-200">
-            <span className={`text-sm font-bold ${!isAutoPlayEnabled ? 'text-slate-900' : 'text-slate-400'}`}>Pay Once</span>
-            <button 
-              onClick={() => setIsAutoPlayEnabled(!isAutoPlayEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isAutoPlayEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoPlayEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-            <span className={`text-sm font-bold flex items-center ${isAutoPlayEnabled ? 'text-slate-900' : 'text-slate-400'}`}>
+          <div className="flex items-center space-x-3 bg-blue-50 px-5 py-2.5 rounded-full shadow-sm border border-blue-100">
+            <span className="text-sm font-bold flex items-center text-blue-700">
               Auto-pay (Monthly)
-              <span className="ml-2 bg-emerald-100 text-emerald-700 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md font-extrabold">Save 10%</span>
+              <span className="ml-2 bg-blue-600 text-white text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md font-extrabold shadow-sm">Save 10%</span>
             </span>
           </div>
         </div>
@@ -144,7 +139,8 @@ export default function PlansPage() {
           const isThisProcessing = processingId === plan.id;
           const isAnyProcessing = processingId !== null;
           
-          const displayPrice = isAutoPlayEnabled ? (plan.price * 0.9).toFixed(2) : plan.price;
+          // Apply 10% discount visually since it's forced Monthly
+          const displayPrice = (plan.price * 0.9).toFixed(2);
 
           return (
             <div key={plan.id} className={`bg-white rounded-3xl p-8 border transition-all duration-300 relative flex flex-col ${i === 1 ? 'border-blue-500 shadow-2xl shadow-blue-500/20 scale-105 z-10' : 'border-gray-200 shadow-lg hover:shadow-xl hover:-translate-y-1'}`}>
@@ -163,12 +159,7 @@ export default function PlansPage() {
                 <span className="text-slate-500 font-medium ml-2 mb-1">/ month</span>
               </div>
               
-              {isAutoPlayEnabled && (
-                <p className="text-emerald-600 text-xs font-bold mt-2">Billed monthly (Cancel anytime)</p>
-              )}
-              {!isAutoPlayEnabled && (
-                <p className="text-slate-500 text-xs font-medium mt-2">Billed once</p>
-              )}
+              <p className="text-emerald-600 text-xs font-bold mt-2">Billed monthly (Cancel anytime)</p>
 
               <ul className="mt-8 space-y-4 flex-1">
                 <li className="flex items-center text-slate-800 font-bold">
@@ -206,7 +197,7 @@ export default function PlansPage() {
                     Processing...
                   </>
                 ) : (
-                  isAutoPlayEnabled ? `Subscribe for $${displayPrice}` : `Buy ${plan.allocated_credits} Minutes`
+                  `Subscribe for $${displayPrice}`
                 )}
               </button>
             </div>
