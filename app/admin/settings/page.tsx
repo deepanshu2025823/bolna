@@ -22,7 +22,7 @@ export default function AdminSettings() {
         const data = await res.json();
         if (data.success) {
           setGeneralData({
-            portal_name: data.data.settings?.portal_name || 'AI Portal Pro',
+            portal_name: data.data.settings?.portal_name || 'HIGHVANCE',
             support_email: data.data.settings?.support_email || 'support@company.com',
             admin_name: data.data.admin?.name || 'Admin User'
           });
@@ -72,6 +72,9 @@ export default function AdminSettings() {
         setStatusMsg({ type: 'success', text: data.message || 'Settings updated successfully!' });
         if (tab === 'security') {
           setSecurityData({ current_password: '', new_password: '', confirm_password: '' });
+        }
+        if (tab === 'general') {
+          setTimeout(() => window.location.reload(), 1000);
         }
       } else {
         setStatusMsg({ type: 'error', text: data.message || 'Failed to update settings.' });
@@ -153,7 +156,7 @@ export default function AdminSettings() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Portal Name</label>
-                    <input type="text" required value={generalData.portal_name} onChange={(e) => setGeneralData({...generalData, portal_name: e.target.value})} className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" placeholder="e.g. AI Portal Pro" />
+                    <input type="text" required value={generalData.portal_name} onChange={(e) => setGeneralData({...generalData, portal_name: e.target.value})} className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" placeholder="e.g. HIGHVANCE" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Support Email</label>

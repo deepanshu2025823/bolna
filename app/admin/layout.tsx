@@ -11,6 +11,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [adminName, setAdminName] = useState('Admin User');
   const [adminInitial, setAdminInitial] = useState('A');
   
+  const [portalName, setPortalName] = useState('HIGHVANCE');
+  
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   
@@ -45,20 +47,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    const fetchAdminProfile = async () => {
+    const fetchAdminProfileAndSettings = async () => {
       try {
         const res = await fetch('/api/admin/settings');
         const data = await res.json();
-        if (data.success && data.data.admin) {
-          const name = data.data.admin.name;
-          setAdminName(name);
-          setAdminInitial(name.charAt(0).toUpperCase());
+        if (data.success) {
+          if (data.data.admin) {
+            const name = data.data.admin.name;
+            setAdminName(name);
+            setAdminInitial(name.charAt(0).toUpperCase());
+          }
+          if (data.data.settings && data.data.settings.portal_name) {
+            setPortalName(data.data.settings.portal_name);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch admin profile');
       }
     };
-    fetchAdminProfile();
+    fetchAdminProfileAndSettings();
   }, []);
 
   const handleLogout = async () => {
@@ -90,7 +97,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 mr-3 shadow-lg shadow-blue-500/20 border border-blue-400/20">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-white">AI Portal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Pro</span></span>
+          <span className="text-xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 uppercase">
+            {portalName}
+          </span>
         </div>
 
         <div className="px-4 py-8 flex-1 overflow-y-auto custom-scrollbar">
