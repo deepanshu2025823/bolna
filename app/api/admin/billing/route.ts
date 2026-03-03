@@ -23,3 +23,20 @@ export async function GET() {
     return NextResponse.json({ success: false, message: 'Failed to fetch billing data' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const connection = await pool.getConnection();
+    
+    await connection.query('DELETE FROM transactions');
+    
+    await connection.query('ALTER TABLE transactions AUTO_INCREMENT = 1');
+    
+    connection.release();
+
+    return NextResponse.json({ success: true, message: 'All billing records cleared successfully!' });
+  } catch (error: any) {
+    console.error('Billing Clear API Error:', error);
+    return NextResponse.json({ success: false, message: 'Failed to clear billing records' }, { status: 500 });
+  }
+}

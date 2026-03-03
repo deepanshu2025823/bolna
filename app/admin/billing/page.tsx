@@ -8,21 +8,43 @@ export default function BillingManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all'); 
 
-  useEffect(() => {
-    const fetchBilling = async () => {
-      try {
-        const res = await fetch('/api/admin/billing');
-        const data = await res.json();
-        if (data.success) {
-          setTransactions(data.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch billing records');
+  const fetchBilling = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/admin/billing');
+      const data = await res.json();
+      if (data.success) {
+        setTransactions(data.data);
       }
-      setIsLoading(false);
-    };
+    } catch (error) {
+      console.error('Failed to fetch billing records');
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
     fetchBilling();
   }, []);
+
+  const handleClearAll = async () => {
+    if (!confirm('CRITICAL WARNING: This will permanently delete ALL billing and transaction history. Proceed?')) return;
+    
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/admin/billing', { method: 'DELETE' });
+      const data = await res.json();
+      
+      if (data.success) {
+        setTransactions([]); 
+        alert('All billing records have been cleared.');
+      } else {
+        alert(data.message || 'Failed to clear data');
+      }
+    } catch (error) {
+      alert('Something went wrong.');
+    }
+    setIsLoading(false);
+  };
 
   const filteredTransactions = transactions.filter(t => filter === 'all' || t.status === filter);
 
@@ -33,6 +55,13 @@ export default function BillingManagement() {
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Billing & Subscriptions</h2>
           <p className="text-slate-500 text-sm mt-1.5 font-medium">Track client payments, failed transactions, and subscription statuses.</p>
         </div>
+        
+        <button 
+          onClick={handleClearAll}
+          className="w-full sm:w-auto px-5 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
+        >
+          Clear All Records
+        </button>
       </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-2">
