@@ -12,7 +12,7 @@ export default function ClientSettings() {
   const [profileData, setProfileData] = useState({ name: '', email: '' });
   const [securityData, setSecurityData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   
-  const [brandData, setBrandData] = useState({ company_name: '' });
+  const [brandData, setBrandData] = useState({ company_name: '', logo_url: '' });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -21,7 +21,11 @@ export default function ClientSettings() {
         const data = await res.json();
         if (data.success) {
           setProfileData({ name: data.data.name, email: data.data.email });
-          setBrandData({ company_name: data.data.company_name || '' }); 
+          
+          setBrandData({ 
+            company_name: data.data.company_name || '',
+            logo_url: data.data.logo_url || ''
+          });
         }
       } catch (error) {
         console.error('Failed to load profile');
@@ -46,15 +50,13 @@ export default function ClientSettings() {
       }
     }
 
-    if (tab === 'branding') {
-      setStatusMsg({ type: 'success', text: 'Brand settings will be available in Phase 2.' });
-      return; 
-    }
-
     setIsSaving(true);
     let payload: any = { tab };
+    
     if (tab === 'profile') payload = { ...payload, name: profileData.name };
     if (tab === 'security') payload = { ...payload, currentPassword: securityData.currentPassword, newPassword: securityData.newPassword };
+    
+    if (tab === 'branding') payload = { ...payload, company_name: brandData.company_name, logo_url: brandData.logo_url };
 
     try {
       const res = await fetch('/api/user/profile', {
@@ -67,6 +69,10 @@ export default function ClientSettings() {
       if (data.success) {
         setStatusMsg({ type: 'success', text: data.message });
         if (tab === 'security') setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        
+        if (tab === 'branding') {
+          setTimeout(() => window.location.reload(), 1000);
+        }
       } else {
         setStatusMsg({ type: 'error', text: data.message });
       }
@@ -101,7 +107,7 @@ export default function ClientSettings() {
               My Profile
             </button>
             <button onClick={() => {setActiveTab('branding'); setStatusMsg(null);}} className={`flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'branding' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 00-2-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               Brand Identity
             </button>
             <button onClick={() => {setActiveTab('security'); setStatusMsg(null);}} className={`flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'security' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
@@ -142,7 +148,7 @@ export default function ClientSettings() {
           {activeTab === 'branding' && (
             <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-0' : ''}`}>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Brand Identity</h3>
-              <p className="text-sm text-slate-500 mb-6">Customize the portal to reflect your company's brand.</p>
+              <p className="text-sm text-slate-500 mb-6">Customize the portal to reflect your company's brand in the sidebar.</p>
               
               <form onSubmit={(e) => handleSave(e, 'branding')} className="space-y-6">
                 <div>
@@ -151,18 +157,22 @@ export default function ClientSettings() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Custom Logo URL</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Custom Logo URL (.png or .svg)</label>
                   <div className="flex items-center space-x-4">
-                    <div className="h-16 w-16 bg-slate-100 border border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <div className="h-16 w-16 bg-slate-100 border border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400 overflow-hidden">
+                      {brandData.logo_url ? (
+                        <img src={brandData.logo_url} alt="Logo" className="h-full w-full object-contain p-2" />
+                      ) : (
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 00-2-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      )}
                     </div>
-                    <input type="url" placeholder="https://..." className="w-full max-w-sm px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" disabled />
+                    <input type="url" value={brandData.logo_url} onChange={(e) => setBrandData({...brandData, logo_url: e.target.value})} placeholder="https://yourdomain.com/logo.png" className="w-full max-w-sm px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
                   </div>
-                  <p className="text-xs text-slate-400 mt-2 font-medium">Logo uploads will be available in the Phase 2 agent-builder update.</p>
+                  <p className="text-xs text-slate-400 mt-2 font-medium">Paste the direct URL to your logo image. Transparent PNG works best.</p>
                 </div>
                 
                 <div className="pt-4 border-t border-gray-100">
-                  <button type="submit" className="bg-slate-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-md">Save Brand Settings</button>
+                  <button type="submit" disabled={isSaving} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-md">{isSaving ? 'Saving...' : 'Save Brand Settings'}</button>
                 </div>
               </form>
             </div>

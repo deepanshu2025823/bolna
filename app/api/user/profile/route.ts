@@ -1,14 +1,15 @@
 // app/api/user/profile/route.ts
 import { NextResponse } from 'next/server';
+import pool from '@/lib/db';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
-import pool from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 async function getUserId() {
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
   if (!token) return null;
+
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
@@ -21,68 +22,77 @@ async function getUserId() {
 export async function GET() {
   try {
     const userId = await getUserId();
-    if (!userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
 
     const connection = await pool.getConnection();
     
     const [users]: any = await connection.query(`
-      SELECT u.id, u.name, u.email, u.role, u.designation, u.bolna_sub_account_id, w.balance 
-      FROM users u 
+      SELECT u.id, u.name, u.email, u.role, u.company_name, u.logo_url, w.balance 
+      FROM users u
       LEFT JOIN wallets w ON u.id = w.user_id 
       WHERE u.id = ?
     `, [userId]);
+    
     connection.release();
 
-    if (users.length === 0) return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    if (users.length === 0) {
+      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
 
     return NextResponse.json({ success: true, data: users[0] });
   } catch (error: any) {
-    console.error('Profile API Error:', error);
-    return NextResponse.json({ success: false, message: 'Failed to fetch profile' }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
     const userId = await getUserId();
-    if (!userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
 
-    const { tab, name, currentPassword, newPassword } = await request.json();
+    const body = await request.json();
     const connection = await pool.getConnection();
 
-    if (tab === 'profile') {
-      if (!name || name.trim() === '') {
-        connection.release();
-        return NextResponse.json({ success: false, message: 'Name cannot be empty.' }, { status: 400 });
-      }
-      await connection.query('UPDATE users SET name = ? WHERE id = ?', [name, userId]);
-      
-    } else if (tab === 'security') {
-      if (!currentPassword || !newPassword) {
-        connection.release();
-        return NextResponse.json({ success: false, message: 'Both current and new passwords are required.' }, { status: 400 });
-      }
-
-      const [users]: any = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);
-      const validPassword = await bcrypt.compare(currentPassword, users[0].password);
-      
-      if (!validPassword) {
-        connection.release();
-        return NextResponse.json({ success: false, message: 'Current password is incorrect.' }, { status: 400 });
-      }
-
-      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-      await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, userId]);
-    } else {
+    if (body.tab === 'profile') {
+      await connection.query('UPDATE users SET name = ? WHERE id = ?', [body.name, userId]);
       connection.release();
-      return NextResponse.json({ success: false, message: 'Invalid update request.' }, { status: 400 });
+      return NextResponse.json({ success: true, message: 'Profile updated successfully' });
+    }
+
+    if (body.tab === 'branding') {
+      await connection.query('UPDATE users SET company_name = ?, logo_url = ? WHERE id = ?', [body.company_name, body.logo_url, userId]);
+      connection.release();
+      return NextResponse.json({ success: true, message: 'Branding updated successfully' });
+    }
+
+    if (body.tab === 'security') {
+      const [users]: any = await connection.query('SELECT password FROM users WHERE id = ?', [userId]);
+      if (users.length === 0) {
+        connection.release();
+        return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      }
+
+      const passwordMatch = await bcrypt.compare(body.currentPassword, users[0].password);
+      if (!passwordMatch) {
+        connection.release();
+        return NextResponse.json({ success: false, message: 'Incorrect current password' }, { status: 400 });
+      }
+
+      const hashedPassword = await bcrypt.hash(body.newPassword, 10);
+      await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+      connection.release();
+
+      return NextResponse.json({ success: true, message: 'Password updated successfully' });
     }
 
     connection.release();
-    return NextResponse.json({ success: true, message: 'Profile updated successfully!' });
+    return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
 
   } catch (error: any) {
-    console.error('Profile Update Error:', error);
-    return NextResponse.json({ success: false, message: 'Failed to update profile' }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
