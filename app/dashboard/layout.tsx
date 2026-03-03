@@ -94,22 +94,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       );
     }
     
-    if (userProfile?.company_name) {
-      return (
-        <>
-          <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20 shrink-0">
-            <span className="text-white font-extrabold text-sm">{userProfile.company_name.charAt(0).toUpperCase()}</span>
-          </div>
-          <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase truncate">
-            {userProfile.company_name}
-          </span>
-        </>
-      );
-    }
+    const finalName = userProfile?.company_name || portalName || 'HIGHVANCE';
 
-    const nameToRender = portalName || 'HIGHVANCE';
-    
-    if (nameToRender.toUpperCase() === 'HIGHVANCE') {
+    if (finalName.toUpperCase() === 'HIGHVANCE') {
       return (
         <>
           <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20 shrink-0">
@@ -126,10 +113,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return (
       <>
         <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 mr-3 shadow-md shadow-blue-500/20 shrink-0">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          <span className="text-white font-extrabold text-sm">{finalName.charAt(0).toUpperCase()}</span>
         </div>
         <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase truncate">
-          {nameToRender}
+          {finalName}
         </span>
       </>
     );
