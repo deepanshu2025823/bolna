@@ -10,6 +10,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [scrolled, setScrolled] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   
+  const [portalName, setPortalName] = useState('HIGHVANCE');
+  
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
@@ -42,7 +44,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndSettings = async () => {
       try {
         const res = await fetch('/api/user/profile');
         const data = await res.json();
@@ -51,11 +53,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         } else {
           router.push('/login');
         }
+
+        const settingsRes = await fetch('/api/admin/settings');
+        const settingsData = await settingsRes.json();
+        if (settingsData.success && settingsData.data.settings?.portal_name) {
+          setPortalName(settingsData.data.settings.portal_name);
+        }
       } catch (error) {
-        console.error("Error fetching profile");
+        console.error("Error fetching data");
       }
     };
-    fetchProfile();
+    fetchProfileAndSettings();
   }, [pathname, router]);
 
   const handleLogout = () => {
@@ -73,6 +81,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   ];
 
   const isRestricted = userProfile && Number(userProfile.balance) <= 0;
+
+  const renderPortalName = (name: string) => {
+    if (name.toUpperCase() === 'HIGHVANCE') {
+      return (
+        <span className="text-xl font-extrabold tracking-tight uppercase">
+          <span className="text-slate-900">HIGH</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">VANCE</span>
+        </span>
+      );
+    }
+    return (
+      <span className="text-xl font-extrabold tracking-tight text-slate-900 uppercase">
+        {name}
+      </span>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F7FB] flex font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
@@ -95,9 +119,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-slate-900">
-            Client <span className="text-blue-600">Portal</span>
-          </span>
+          {/* DYNAMIC LOGO CALL */}
+          {renderPortalName(portalName)}
         </div>
 
         {userProfile && (
@@ -133,7 +156,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} /></svg>
                       {item.name}
                     </div>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                   </div>
                 );
               }
