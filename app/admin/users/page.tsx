@@ -90,6 +90,27 @@ export default function UsersManagement() {
     } catch (error) { alert('Failed to clear data'); }
   };
 
+  const handleLoginAs = async (userId: number, userName: string) => {
+    if (!confirm(`Are you sure you want to login as ${userName}? You will be redirected to their dashboard.`)) return;
+    
+    try {
+      const res = await fetch('/api/admin/users/login-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: userId })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        window.location.href = '/dashboard';
+      } else {
+        alert(data.message || 'Failed to login as client');
+      }
+    } catch (error) {
+      alert('Something went wrong. Please try again.');
+    }
+  };
+
   const resetForm = () => {
     setFormData({ name: '', email: '', password: '', balance: '', role: 'client' });
     setFormStatus({ type: 'idle', msg: '' });
@@ -181,7 +202,19 @@ export default function UsersManagement() {
                         {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins</span>
                       </p>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-1">
+                    <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
+                      
+                      {user.role === 'client' && (
+                        <button 
+                          onClick={() => handleLoginAs(user.id, user.name)}
+                          title="Login as this client"
+                          className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-2 rounded-lg transition-colors border border-slate-200"
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                          Login
+                        </button>
+                      )}
+
                       <button onClick={() => openEditModal(user)} className="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>

@@ -11,8 +11,8 @@ export default function ClientSettings() {
 
   const [profileData, setProfileData] = useState({ name: '', email: '' });
   const [securityData, setSecurityData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  
   const [brandData, setBrandData] = useState({ company_name: '', logo_url: '' });
+  const [domainData, setDomainData] = useState({ custom_domain: '' });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -21,7 +21,6 @@ export default function ClientSettings() {
         const data = await res.json();
         if (data.success) {
           setProfileData({ name: data.data.name, email: data.data.email });
-          
           setBrandData({ 
             company_name: data.data.company_name || '',
             logo_url: data.data.logo_url || ''
@@ -50,12 +49,16 @@ export default function ClientSettings() {
       }
     }
 
+    if (tab === 'domain') {
+      setStatusMsg({ type: 'success', text: 'Domain configuration instructions generated below!' });
+      return; 
+    }
+
     setIsSaving(true);
     let payload: any = { tab };
     
     if (tab === 'profile') payload = { ...payload, name: profileData.name };
     if (tab === 'security') payload = { ...payload, currentPassword: securityData.currentPassword, newPassword: securityData.newPassword };
-    
     if (tab === 'branding') payload = { ...payload, company_name: brandData.company_name, logo_url: brandData.logo_url };
 
     try {
@@ -69,7 +72,6 @@ export default function ClientSettings() {
       if (data.success) {
         setStatusMsg({ type: 'success', text: data.message });
         if (tab === 'security') setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        
         if (tab === 'branding') {
           setTimeout(() => window.location.reload(), 1000);
         }
@@ -84,22 +86,39 @@ export default function ClientSettings() {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
+  const copyToClipboard = () => {
+    const code = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>${brandData.company_name || 'Client Portal'}</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <iframe src="https://bolna-pi.vercel.app"></iframe>
+</body>
+</html>`;
+    navigator.clipboard.writeText(code);
+    alert('Code copied to clipboard!');
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
   }
 
   return (
     <div className="space-y-6 sm:space-y-8 font-sans">
-      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Profile Settings</h2>
-          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage your personal information, branding, and security preferences.</p>
+          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage your personal information, branding, domain, and security.</p>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        
         <div className="w-full lg:w-64 flex-shrink-0">
           <nav className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
             <button onClick={() => {setActiveTab('profile'); setStatusMsg(null);}} className={`flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'profile' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
@@ -107,9 +126,15 @@ export default function ClientSettings() {
               My Profile
             </button>
             <button onClick={() => {setActiveTab('branding'); setStatusMsg(null);}} className={`flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'branding' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 00-2-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               Brand Identity
             </button>
+            
+            <button onClick={() => {setActiveTab('domain'); setStatusMsg(null);}} className={`flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'domain' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
+              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+              Domain Setup
+            </button>
+
             <button onClick={() => {setActiveTab('security'); setStatusMsg(null);}} className={`flex items-center px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'security' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               Security
@@ -118,7 +143,6 @@ export default function ClientSettings() {
         </div>
 
         <div className="flex-1 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          
           {statusMsg && (
             <div className={`m-6 p-4 rounded-xl text-sm font-semibold flex items-start animate-fade-in ${statusMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
               {statusMsg.text}
@@ -149,13 +173,11 @@ export default function ClientSettings() {
             <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-0' : ''}`}>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Brand Identity</h3>
               <p className="text-sm text-slate-500 mb-6">Customize the portal to reflect your company's brand in the sidebar.</p>
-              
               <form onSubmit={(e) => handleSave(e, 'branding')} className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Company / Workspace Name</label>
                   <input type="text" value={brandData.company_name} onChange={(e) => setBrandData({...brandData, company_name: e.target.value})} placeholder="e.g. My Agency" className="w-full max-w-md px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
                 </div>
-                
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Custom Logo URL (.png or .svg)</label>
                   <div className="flex items-center space-x-4">
@@ -170,10 +192,62 @@ export default function ClientSettings() {
                   </div>
                   <p className="text-xs text-slate-400 mt-2 font-medium">Paste the direct URL to your logo image. Transparent PNG works best.</p>
                 </div>
-                
                 <div className="pt-4 border-t border-gray-100">
                   <button type="submit" disabled={isSaving} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-md">{isSaving ? 'Saving...' : 'Save Brand Settings'}</button>
                 </div>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'domain' && (
+            <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-0' : ''}`}>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Custom Domain Mapping</h3>
+              <p className="text-sm text-slate-500 mb-6 font-medium">Host your unique client portal on your own domain.</p>
+              
+              <form onSubmit={(e) => handleSave(e, 'domain')} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Enter Your Custom Domain</label>
+                  <input 
+                    type="text" 
+                    value={domainData.custom_domain} 
+                    onChange={(e) => setDomainData({custom_domain: e.target.value})} 
+                    placeholder="e.g. portal.myagency.com" 
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" 
+                  />
+                </div>
+
+                {domainData.custom_domain && (
+                  <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl animate-fade-in">
+                    <h4 className="font-bold text-blue-900 mb-2">Setup Instructions</h4>
+                    <p className="text-sm text-blue-800 mb-4 leading-relaxed">
+                      To host this portal on <strong>{domainData.custom_domain}</strong>, go to your Domain's File Manager and create an <code>index.html</code> file with the code below.
+                    </p>
+                    <div className="relative">
+                      <pre className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs overflow-x-auto font-mono">
+{`<!DOCTYPE html>
+<html>
+<head>
+    <title>${brandData.company_name || 'Client Portal'}</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <iframe src="https://bolna-pi.vercel.app"></iframe>
+</body>
+</html>`}
+                      </pre>
+                      <button 
+                        type="button"
+                        onClick={copyToClipboard}
+                        className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Copy Code
+                      </button>
+                    </div>
+                  </div>
+                )}
               </form>
             </div>
           )}
@@ -200,7 +274,6 @@ export default function ClientSettings() {
               </form>
             </div>
           )}
-
         </div>
       </div>
     </div>
