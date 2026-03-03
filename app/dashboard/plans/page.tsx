@@ -33,7 +33,7 @@ export default function PlansPage() {
       const res = await fetch('/api/user/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: plan.price })
+        body: JSON.stringify({ amount: plan.price, planName: plan.name }) 
       });
       const orderData = await res.json();
 
@@ -80,10 +80,27 @@ export default function PlansPage() {
       };
 
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
+      
+      rzp.on('payment.failed', async function (response: any) {
         alert(`Payment Failed: ${response.error.description}`);
+        
+        try {
+          await fetch('/api/user/payment/failed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.error.metadata.order_id,
+              razorpay_payment_id: response.error.metadata.payment_id,
+              reason: response.error.description
+            })
+          });
+        } catch(e) {
+          console.error('Failed to log payment failure to DB');
+        }
+        
         setProcessingId(null);
       });
+      
       rzp.open();
 
     } catch (error) {
