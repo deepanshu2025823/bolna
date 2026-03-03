@@ -19,13 +19,8 @@ export async function GET() {
       )
     `);
 
-    try {
-      await connection.query("ALTER TABLE users ADD COLUMN designation VARCHAR(255) DEFAULT 'Staff'");
-    } catch (e) {}
-
-    try {
-      await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'client', 'staff') DEFAULT 'client'");
-    } catch (e) {}
+    try { await connection.query("ALTER TABLE users ADD COLUMN designation VARCHAR(255) DEFAULT 'Staff'"); } catch (e) {}
+    try { await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'client', 'staff') DEFAULT 'client'"); } catch (e) {}
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS plans (
@@ -38,9 +33,7 @@ export async function GET() {
       )
     `);
 
-    try {
-      await connection.query("ALTER TABLE plans ADD COLUMN features TEXT");
-    } catch (e) {}
+    try { await connection.query("ALTER TABLE plans ADD COLUMN features TEXT"); } catch (e) {}
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS wallets (
@@ -48,6 +41,21 @@ export async function GET() {
         user_id INT NOT NULL,
         balance DECIMAL(10, 2) DEFAULT 0.00,
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        razorpay_order_id VARCHAR(255),
+        razorpay_payment_id VARCHAR(255),
+        plan_name VARCHAR(100),
+        amount DECIMAL(10, 2) NOT NULL,
+        status ENUM('pending', 'success', 'failed') DEFAULT 'pending',
+        failure_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -99,15 +107,11 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Database tables initialized successfully with dynamic features column!' 
+      message: 'Database initialized successfully with Transactions table for Billing tracking!' 
     });
 
   } catch (error: any) {
     console.error('DB Init Error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Failed to initialize database', 
-      error: error.message 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Failed to initialize database', error: error.message }, { status: 500 });
   }
 }
