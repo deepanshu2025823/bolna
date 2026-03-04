@@ -3,13 +3,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [adminName, setAdminName] = useState('Admin User');
-  const [adminInitial, setAdminInitial] = useState('A');
+  
+  const [adminName, setAdminName] = useState('Loading...');
+  const [adminInitial, setAdminInitial] = useState('U');
+  const [adminRoleDisplay, setAdminRoleDisplay] = useState('Role');
   
   const [portalName, setPortalName] = useState('HIGHVANCE');
   
@@ -18,6 +20,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   const pathname = usePathname();
   const router = useRouter();
+  
+  // URL Params to detect if we are in 'secret login' mode
+  const searchParams = useSearchParams();
+  const secretLoginName = searchParams.get('secret_login');
   
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -47,26 +53,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    const fetchAdminProfileAndSettings = async () => {
+    const fetchProfileAndSettings = async () => {
       try {
-        const res = await fetch('/api/admin/settings');
-        const data = await res.json();
-        if (data.success) {
-          if (data.data.admin) {
-            const name = data.data.admin.name;
-            setAdminName(name);
-            setAdminInitial(name.charAt(0).toUpperCase());
-          }
-          if (data.data.settings && data.data.settings.portal_name) {
-            setPortalName(data.data.settings.portal_name);
-          }
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (profileData.success) {
+          setAdminName(profileData.data.name);
+          setAdminInitial(profileData.data.name.charAt(0).toUpperCase());
+          setAdminRoleDisplay(profileData.data.role === 'admin' ? 'Master Admin' : 'Staff Member');
+        } else {
+          router.push('/login');
+        }
+
+        const settingsRes = await fetch('/api/admin/settings');
+        const settingsData = await settingsRes.json();
+        if (settingsData.success && settingsData.data.settings?.portal_name) {
+          setPortalName(settingsData.data.settings.portal_name);
         }
       } catch (error) {
         console.error('Failed to fetch admin profile');
       }
     };
-    fetchAdminProfileAndSettings();
-  }, []);
+    fetchProfileAndSettings();
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -143,6 +153,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
+        {secretLoginName && (
+          <div className="bg-red-500 text-white text-xs font-bold text-center py-1.5 uppercase tracking-widest animate-pulse shadow-sm z-30">
+            ⚠️ You are currently impersonating: {secretLoginName.replace(/_/g, ' ')}
+          </div>
+        )}
+
         <header className={`sticky top-0 z-20 h-20 transition-all duration-200 flex items-center justify-between px-4 sm:px-6 lg:px-10 ${scrolled ? 'bg-white/80 backdrop-blur-xl border-b border-gray-200/80 shadow-sm' : 'bg-transparent border-b border-transparent'}`}>
           <div className="flex items-center">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-800 hover:bg-slate-100 p-2.5 rounded-xl mr-3 transition-colors focus:outline-none">
@@ -200,7 +216,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                  </div>
                  <div className="hidden md:block ml-3">
                    <p className="text-sm font-bold text-slate-700 leading-tight">{adminName}</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">Master Admin</p>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">{adminRoleDisplay}</p>
                  </div>
                  <svg className="hidden md:block w-4 h-4 ml-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -211,7 +227,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in origin-top-right z-50">
                    <div className="px-4 py-3 border-b border-gray-50 mb-1 lg:hidden">
                      <p className="text-sm font-bold text-slate-800">{adminName}</p>
-                     <p className="text-xs text-slate-500">admin@portal.com</p>
+                     <p className="text-xs text-slate-500">{adminRoleDisplay}</p>
                    </div>
                    <Link href="/admin/settings" onClick={() => setIsProfileOpen(false)} className="flex items-center px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">
                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
