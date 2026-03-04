@@ -91,7 +91,7 @@ export default function UsersManagement() {
   };
 
   const handleLoginAs = async (userId: number, userName: string) => {
-    if (!confirm(`Are you sure you want to login as ${userName}? You will be redirected to their dashboard.`)) return;
+    if (!confirm(`Are you sure you want to login as ${userName}? Their dashboard will open in a new tab.`)) return;
     
     try {
       const res = await fetch('/api/admin/users/login-as', {
@@ -102,7 +102,7 @@ export default function UsersManagement() {
       const data = await res.json();
       
       if (data.success) {
-        window.location.href = '/dashboard';
+        window.open('/dashboard', '_blank');
       } else {
         alert(data.message || 'Failed to login as client');
       }
@@ -202,12 +202,11 @@ export default function UsersManagement() {
                         {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins</span>
                       </p>
                     </td>
-                    
                     <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
-                      {/* CONDITION REMOVED - THIS BUTTON WILL NOW ALWAYS SHOW UP */}
+                      
                       <button 
                         onClick={() => handleLoginAs(user.id, user.name)}
-                        title="Login as this user"
+                        title="Login as this user in a new tab"
                         className="flex items-center text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200 shadow-sm"
                       >
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
