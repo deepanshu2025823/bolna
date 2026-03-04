@@ -66,7 +66,7 @@ export default function PlansPage() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_SMPZWp9Km7zQyf', 
         name: 'AI Portal Pro',
         description: isTopup ? `Purchase ${minutesToGive} Additional Minutes` : `Subscribe to ${plan.name} Plan (Monthly)`, 
-        subscription_id: !isTopup ? orderData.subscription?.id : undefined, // Backend should adapt to send order_id if topup
+        subscription_id: !isTopup ? orderData.subscription?.id : undefined, 
         order_id: isTopup ? orderData.order?.id : undefined,
         handler: async function (response: any) {
           const verifyRes = await fetch('/api/user/payment/verify', {
@@ -74,6 +74,7 @@ export default function PlansPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               razorpay_subscription_id: response.razorpay_subscription_id, 
+              razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               minutesToAdd: minutesToGive,
