@@ -202,8 +202,8 @@ export default function UsersManagement() {
                         {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins</span>
                       </p>
                     </td>
+                    
                     <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
-                      
                       {user.role === 'client' && (
                         <button 
                           onClick={() => handleLoginAs(user.id, user.name)}
