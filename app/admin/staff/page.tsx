@@ -12,6 +12,8 @@ export default function StaffManagement() {
   const [editingStaff, setEditingStaff] = useState<any>(null);
   
   const [formData, setFormData] = useState({ name: '', email: '', password: '', designation: 'Support Agent' });
+  const [customDesignation, setCustomDesignation] = useState('');
+  
   const [formStatus, setFormStatus] = useState<{ type: 'idle'|'loading'|'success'|'error', msg: string }>({ type: 'idle', msg: '' });
 
   const fetchStaff = async () => {
@@ -34,8 +36,17 @@ export default function StaffManagement() {
     e.preventDefault();
     setFormStatus({ type: 'loading', msg: '' });
     
+    const finalDesignation = formData.designation === 'custom' ? customDesignation : formData.designation;
+
+    if (formData.designation === 'custom' && !customDesignation.trim()) {
+      setFormStatus({ type: 'error', msg: 'Please enter a custom designation' });
+      return;
+    }
+
     const method = editingStaff ? 'PUT' : 'POST';
-    const body = editingStaff ? { id: editingStaff.id, ...formData } : formData;
+    const body = editingStaff 
+      ? { id: editingStaff.id, ...formData, designation: finalDesignation } 
+      : { ...formData, designation: finalDesignation };
 
     try {
       const res = await fetch('/api/admin/staff', {
@@ -56,7 +67,16 @@ export default function StaffManagement() {
   const openModal = (staffMember: any = null) => {
     if (staffMember) {
       setEditingStaff(staffMember);
-      setFormData({ name: staffMember.name, email: staffMember.email, password: '', designation: staffMember.designation });
+      
+      const defaultRoles = ['Support Agent', 'Technical Manager', 'Billing Specialist', 'Super Admin'];
+      if (defaultRoles.includes(staffMember.designation)) {
+        setFormData({ name: staffMember.name, email: staffMember.email, password: '', designation: staffMember.designation });
+        setCustomDesignation('');
+      } else {
+        setFormData({ name: staffMember.name, email: staffMember.email, password: '', designation: 'custom' });
+        setCustomDesignation(staffMember.designation);
+      }
+      
     } else {
       resetForm();
     }
@@ -74,6 +94,7 @@ export default function StaffManagement() {
   const resetForm = () => {
     setEditingStaff(null);
     setFormData({ name: '', email: '', password: '', designation: 'Support Agent' });
+    setCustomDesignation('');
     setFormStatus({ type: 'idle', msg: '' });
   };
 
@@ -195,13 +216,33 @@ export default function StaffManagement() {
               
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Designation / Role</label>
-                <select required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer font-medium text-slate-700" value={formData.designation} onChange={(e) => setFormData({...formData, designation: e.target.value})}>
+                <select 
+                  required 
+                  className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer font-medium text-slate-700" 
+                  value={formData.designation} 
+                  onChange={(e) => setFormData({...formData, designation: e.target.value})}
+                >
                   <option value="Support Agent">Support Agent</option>
                   <option value="Technical Manager">Technical Manager</option>
                   <option value="Billing Specialist">Billing Specialist</option>
                   <option value="Super Admin">Super Admin</option>
+                  <option value="custom" className="font-bold text-blue-600">+ Add Custom Designation</option>
                 </select>
               </div>
+
+              {formData.designation === 'custom' && (
+                <div className="animate-fade-in -mt-2">
+                  <label className="block text-xs font-bold text-blue-600 mb-1.5">Type Custom Designation</label>
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full px-4 py-3 bg-blue-50/50 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900" 
+                    value={customDesignation} 
+                    onChange={(e) => setCustomDesignation(e.target.value)} 
+                    placeholder="e.g. Marketing Head" 
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">{editingStaff ? 'New Password (Optional)' : 'Initial Password'}</label>
