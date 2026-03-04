@@ -11,24 +11,33 @@ export default function PlansPage() {
 
   const [topupMinutes, setTopupMinutes] = useState<number>(1000);
   const [selectedRatePlanId, setSelectedRatePlanId] = useState<string>('');
+  
+  const [hasPurchasedPlan, setHasPurchasedPlan] = useState<boolean>(false);
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/admin/plans'); 
-        const data = await res.json();
-        if (data.success) {
-          setPlans(data.data);
-          if (data.data.length > 0) {
-            setSelectedRatePlanId(data.data[0].id.toString());
+        const resPlans = await fetch('/api/admin/plans'); 
+        const dataPlans = await resPlans.json();
+        if (dataPlans.success) {
+          setPlans(dataPlans.data);
+          if (dataPlans.data.length > 0) {
+            setSelectedRatePlanId(dataPlans.data[0].id.toString());
           }
         }
+
+        const resStatus = await fetch('/api/user/plan-status');
+        const dataStatus = await resStatus.json();
+        if (dataStatus.success) {
+          setHasPurchasedPlan(dataStatus.hasPurchased);
+        }
+
       } catch (error) {
-        console.error('Failed to load plans');
+        console.error('Failed to load plans data');
       }
       setIsLoading(false);
     };
-    fetchPlans();
+    fetchData();
   }, []);
 
   const selectedRatePlan = plans.find(p => p.id.toString() === selectedRatePlanId) || plans[0];
@@ -180,15 +189,15 @@ export default function PlansPage() {
                     : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
                 } disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center`}
               >
-                {isThisProcessing ? 'Processing...' : `Subscribe for $${displayPrice}`}
+                {isThisProcessing ? 'Processing...' : (hasPurchasedPlan ? `Switch to ${plan.name}` : `Subscribe for $${displayPrice}`)}
               </button>
             </div>
           );
         })}
       </div>
 
-      {plans.length > 0 && (
-        <div className="mt-12 bg-white rounded-3xl p-8 border border-gray-200 shadow-sm relative overflow-hidden">
+      {plans.length > 0 && hasPurchasedPlan && (
+        <div className="mt-12 bg-white rounded-3xl p-8 border border-gray-200 shadow-sm relative overflow-hidden animate-fade-in">
           <div className="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
             <div>
