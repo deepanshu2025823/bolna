@@ -1,31 +1,49 @@
 // app/admin/dashboard/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 
-export default function AdminDashboard() {
+function DashboardSkeleton() {
+  return (
+    <div className="flex justify-center py-20">
+      <svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
+  );
+}
+
+function DashboardContent() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('Loading...');
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboardDataAndProfile = async () => {
       try {
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        if (profileData.success) {
+          setUserName(profileData.data.name);
+        }
+
         const res = await fetch('/api/admin/dashboard');
         const json = await res.json();
         if (json.success) {
           setData(json.data);
         }
       } catch (error) {
-        console.error('Failed to load dashboard data');
+        console.error('Failed to load data');
       }
       setIsLoading(false);
     };
-    fetchDashboardData();
+    fetchDashboardDataAndProfile();
   }, []);
 
   if (isLoading) {
-    return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
+    return <DashboardSkeleton />;
   }
 
   const stats = [
@@ -39,7 +57,7 @@ export default function AdminDashboard() {
     },
     { 
       title: 'Total Executions', 
-      value: data?.totalExecutions.toLocaleString() || '0', 
+      value: data?.totalExecutions?.toLocaleString() || '0', 
       trend: 'Syncing', 
       isUp: true,
       icon: <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
@@ -47,7 +65,7 @@ export default function AdminDashboard() {
     },
     { 
       title: 'Total AI Minutes', 
-      value: data?.totalAIMinutes.toLocaleString() || '0', 
+      value: data?.totalAIMinutes?.toLocaleString() || '0', 
       trend: 'Calculated', 
       isUp: true,
       icon: <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -55,7 +73,7 @@ export default function AdminDashboard() {
     },
     { 
       title: 'Est. Margin Profit', 
-      value: `$${data?.netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}`, 
+      value: `$${data?.netProfit?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}`, 
       trend: 'Real-time', 
       isUp: true,
       icon: <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -70,7 +88,7 @@ export default function AdminDashboard() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full blur-3xl opacity-50 pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
         <div className="relative z-10">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Admin 👋</span>
+            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{userName} 👋</span>
           </h2>
           <p className="text-slate-500 text-sm sm:text-base mt-1.5 font-medium">Here is the live performance of your AI portal today.</p>
         </div>
@@ -167,5 +185,13 @@ export default function AdminDashboard() {
       </div>
 
     </div>
+  );
+}
+
+export default function AdminDashboardWrapper() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
