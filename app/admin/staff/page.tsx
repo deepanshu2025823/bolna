@@ -91,6 +91,27 @@ export default function StaffManagement() {
     } catch (error) { alert('Failed to delete'); }
   };
 
+  const handleLoginAs = async (userId: number, userName: string) => {
+    if (!confirm(`Are you sure you want to login as ${userName}?`)) return;
+    
+    try {
+      const res = await fetch('/api/admin/users/login-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: userId })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        window.open('/admin/dashboard', '_blank');
+      } else {
+        alert(data.message || 'Failed to login as staff');
+      }
+    } catch (error) {
+      alert('Something went wrong. Please try again.');
+    }
+  };
+
   const resetForm = () => {
     setEditingStaff(null);
     setFormData({ name: '', email: '', password: '', designation: 'Support Agent' });
@@ -172,7 +193,18 @@ export default function StaffManagement() {
                     <td className="px-6 py-4 text-sm text-slate-500 font-medium">
                       {new Date(member.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-right space-x-1">
+                    
+                    <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
+                      
+                      <button 
+                        onClick={() => handleLoginAs(member.id, member.name)}
+                        title="Login as this staff member"
+                        className="flex items-center text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors border border-indigo-200 shadow-sm"
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
+                        Login As
+                      </button>
+
                       <button onClick={() => openModal(member)} className="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
