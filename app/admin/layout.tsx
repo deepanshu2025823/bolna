@@ -1,11 +1,11 @@
 // app/admin/layout.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   
@@ -21,7 +21,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   
-  // URL Params to detect if we are in 'secret login' mode
   const searchParams = useSearchParams();
   const secretLoginName = searchParams.get('secret_login');
   
@@ -257,5 +256,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center"><div className="animate-spin h-8 w-8 text-blue-600 rounded-full border-4 border-solid border-current border-r-transparent"></div></div>}>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </Suspense>
   );
 }
