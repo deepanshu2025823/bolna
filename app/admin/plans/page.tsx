@@ -110,7 +110,7 @@ export default function PlansManagement() {
     <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Subscription Plans</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Monthly Subscription Plans</h2>
           <p className="text-slate-500 text-sm mt-1.5 font-medium">Create and manage pricing plans and features for your clients.</p>
         </div>
         <button onClick={() => openModal()} className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center hover:-translate-y-0.5">
@@ -137,13 +137,14 @@ export default function PlansManagement() {
               <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
               <div className="mt-4 flex items-baseline text-4xl font-extrabold text-slate-900">
                 <span className="text-2xl mr-1 text-slate-400">$</span>{plan.price}
+                <span className="text-sm font-medium text-slate-500 ml-2">/ month</span>
               </div>
               
               <div className="mt-6 pt-6 border-t border-gray-100 flex-1">
                 <ul className="space-y-3">
                   <li className="flex items-start text-slate-700 text-sm font-bold">
                     <svg className="w-5 h-5 text-emerald-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                    {plan.allocated_credits} AI Minutes
+                    {plan.allocated_credits} Monthly AI Minutes
                   </li>
                   {plan.features && plan.features.map((feature: string, idx: number) => (
                     <li key={idx} className="flex items-start text-slate-600 text-sm font-medium">
@@ -178,7 +179,7 @@ export default function PlansManagement() {
                     <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Growth Plan" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Price ($)</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Monthly Price ($)</label>
                     <input type="number" step="0.01" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-slate-900" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} placeholder="99.99" />
                   </div>
                   <div>
