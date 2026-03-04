@@ -36,42 +36,70 @@ export async function POST(request: Request) {
     const amount = Number(body.amount);
     const planName = body.planName || 'Basic';
     const minutesToAdd = body.minutesToAdd || 0;
-
-    let rzpPlanId = '';
-    const nameLower = planName.toLowerCase();
-    
-    if (nameLower.includes('basic')) {
-      rzpPlanId = 'plan_SMt2tNCwLdFR4b';
-    } else if (nameLower.includes('growth')) {
-      rzpPlanId = 'plan_SMt481DFct7vO0';
-    } else if (nameLower.includes('premium')) {
-      rzpPlanId = 'plan_SMt4kgOzJ6gso4';
-    } else {
-      return NextResponse.json({ success: false, message: "Invalid Plan Configuration. Plan name must contain Basic, Growth, or Premium." }, { status: 400 });
-    }
-
-    const subscription = await razorpay.subscriptions.create({
-      plan_id: rzpPlanId,
-      customer_notify: 1,
-      total_count: 120, 
-      notes: {
-        userId: userId.toString(),
-        planName: planName,
-        minutesToAdd: minutesToAdd.toString()
-      }
-    });
+    const isTopup = body.isTopup || false; 
 
     const connection = await pool.getConnection();
-    await connection.query(
-      'INSERT INTO transactions (user_id, razorpay_order_id, plan_name, amount, status) VALUES (?, ?, ?, ?, ?)',
-      [userId, subscription.id, planName, amount, 'pending']
-    );
-    connection.release();
 
-    return NextResponse.json({ success: true, subscription });
+    if (isTopup) {
+      const order = await razorpay.orders.create({
+        amount: Math.round(amount * 100), 
+        currency: 'USD', 
+        receipt: `receipt_${Date.now()}`,
+        notes: {
+          userId: userId.toString(),
+          planName: planName,
+          minutesToAdd: minutesToAdd.toString(),
+          isTopup: 'true'
+        }
+      });
+
+      await connection.query(
+        'INSERT INTO transactions (user_id, razorpay_order_id, plan_name, amount, status) VALUES (?, ?, ?, ?, ?)',
+        [userId, order.id, planName, amount, 'pending']
+      );
+      connection.release();
+
+      return NextResponse.json({ success: true, isTopup: true, order });
+    } 
+
+    else {
+      let rzpPlanId = '';
+      const nameLower = planName.toLowerCase();
+      
+      if (nameLower.includes('basic')) {
+        rzpPlanId = 'plan_SMt2tNCwLdFR4b';
+      } else if (nameLower.includes('growth')) {
+        rzpPlanId = 'plan_SMt481DFct7vO0';
+      } else if (nameLower.includes('premium')) {
+        rzpPlanId = 'plan_SMt4kgOzJ6gso4';
+      } else {
+        connection.release();
+        return NextResponse.json({ success: false, message: "Invalid Plan Configuration." }, { status: 400 });
+      }
+
+      const subscription = await razorpay.subscriptions.create({
+        plan_id: rzpPlanId,
+        customer_notify: 1,
+        total_count: 120, 
+        notes: {
+          userId: userId.toString(),
+          planName: planName,
+          minutesToAdd: minutesToAdd.toString(),
+          isTopup: 'false'
+        }
+      });
+
+      await connection.query(
+        'INSERT INTO transactions (user_id, razorpay_order_id, plan_name, amount, status) VALUES (?, ?, ?, ?, ?)',
+        [userId, subscription.id, planName, amount, 'pending']
+      );
+      connection.release();
+
+      return NextResponse.json({ success: true, isTopup: false, subscription });
+    }
     
   } catch (error: any) {
-    console.error("Razorpay Subscription Error:", error);
+    console.error("Razorpay Error:", error);
     return NextResponse.json({ success: false, message: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
