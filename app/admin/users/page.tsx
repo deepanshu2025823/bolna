@@ -204,7 +204,7 @@ export default function UsersManagement() {
                     </td>
                     <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
                       
-                      {user.role === 'client' && (
+                      {user.role === 'admin' && (
                         <button 
                           onClick={() => handleLoginAs(user.id, user.name)}
                           className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors border border-slate-200"
