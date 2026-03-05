@@ -20,6 +20,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  const [hasBackupSession, setHasBackupSession] = useState(false);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -48,9 +50,16 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener('mousedown', handleClickOutside);
 
+    const checkBackupCookie = () => {
+      setHasBackupSession(document.cookie.includes('admin_backup_token'));
+    };
+    checkBackupCookie();
+    const intervalId = setInterval(checkBackupCookie, 1500);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
+      clearInterval(intervalId);
     };
   }, []);
 
@@ -85,13 +94,30 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "admin_backup_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     router.push('/login');
   };
 
+  const handleRevertToAdmin = async () => {
+    try {
+      const res = await fetch('/api/admin/users/revert', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/admin/dashboard'; 
+      } else {
+        alert('Could not restore session. Please login again.');
+        handleLogout();
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error restoring session.');
+    }
+  };
+
   const allNavigationItems = [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', permissionId: 'dashboard' }, // Dashboard is default for everyone
+    { name: 'Dashboard', href: '/admin/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', permissionId: 'dashboard' }, 
     { name: 'Clients / Users', href: '/admin/users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', permissionId: 'manage_users' },
-    { name: 'Team / Staff', href: '/admin/staff', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', permissionId: 'manage_staff' }, // Only Master Admin usually sees this, or a specific permission
+    { name: 'Team / Staff', href: '/admin/staff', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', permissionId: 'manage_staff' }, 
     { name: 'Support Inbox', href: '/admin/support', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z', permissionId: 'manage_support' },
     { name: 'Subscription Plans', href: '/admin/plans', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', permissionId: 'manage_plans' },
     { name: 'Billing & Payments', href: '/admin/billing', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', permissionId: 'manage_billing' },
@@ -101,11 +127,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   const navigation = allNavigationItems.filter(item => {
     if (userRole === 'admin') return true;
-    
     if (item.permissionId === 'dashboard') return true;
-    
     if (item.permissionId === 'manage_staff') return false; 
-    
     return userPermissions.includes(item.permissionId);
   });
 
@@ -157,20 +180,19 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </div>
-
-        <div className="p-4 m-4">
-          <div className="bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border border-blue-500/20 rounded-2xl p-4 text-center">
-             <p className="text-xs text-blue-200 font-medium mb-3">Need help setting up?</p>
-             <button className="w-full text-xs font-bold bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-500 transition-colors">Contact Support</button>
-          </div>
-        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
-        {secretLoginName && (
-          <div className="bg-red-500 text-white text-xs font-bold text-center py-1.5 uppercase tracking-widest animate-pulse shadow-sm z-30">
-            ⚠️ You are currently impersonating: {secretLoginName.replace(/_/g, ' ')}
+        {(secretLoginName || hasBackupSession) && (
+          <div className="bg-red-500 text-white text-xs font-bold text-center py-2.5 px-4 uppercase tracking-widest shadow-md z-30 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 animate-fade-in">
+            <span>⚠️ You are currently in an impersonated session.</span>
+            <button 
+              onClick={handleRevertToAdmin} 
+              className="bg-white text-red-600 px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-50 hover:scale-105 transition-all"
+            >
+              Restore Admin Access
+            </button>
           </div>
         )}
 
