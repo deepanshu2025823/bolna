@@ -20,9 +20,8 @@ async function getAdminId() {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-    if (!token) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const adminId = await getAdminId();
+    if (!adminId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
 
     const connection = await pool.getConnection();
 
@@ -31,12 +30,9 @@ export async function GET() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         portal_name VARCHAR(255) DEFAULT 'AI Portal Pro',
         support_email VARCHAR(255) DEFAULT 'support@company.com',
-        bolna_api_key VARCHAR(255) DEFAULT '',
-        custom_domain VARCHAR(255) DEFAULT ''
+        bolna_api_key VARCHAR(255) DEFAULT ''
       )
     `);
-
-    try { await connection.query("ALTER TABLE settings ADD COLUMN custom_domain VARCHAR(255) DEFAULT ''"); } catch (e) {}
 
     const [settingsCheck]: any = await connection.query('SELECT * FROM settings LIMIT 1');
     if (settingsCheck.length === 0) {
@@ -45,12 +41,7 @@ export async function GET() {
 
     const [settings]: any = await connection.query('SELECT * FROM settings LIMIT 1');
     
-    let adminData = null;
-    const adminId = await getAdminId();
-    if (adminId) {
-       const [admin]: any = await connection.query('SELECT name, email FROM users WHERE id = ?', [adminId]);
-       adminData = admin[0];
-    }
+    const [admin]: any = await connection.query('SELECT name, email FROM users WHERE id = ?', [adminId]);
 
     connection.release();
 
@@ -58,7 +49,7 @@ export async function GET() {
       success: true, 
       data: {
         settings: settings[0],
-        admin: adminData
+        admin: admin[0]
       }
     });
   } catch (error: any) {
@@ -84,10 +75,6 @@ export async function PUT(request: Request) {
     } else if (tab === 'api') {
       const { bolna_api_key } = body;
       await connection.query('UPDATE settings SET bolna_api_key = ?', [bolna_api_key]);
-
-    } else if (tab === 'domain') {
-      const { custom_domain } = body;
-      await connection.query('UPDATE settings SET custom_domain = ?', [custom_domain]);
 
     } else if (tab === 'security') {
       const { current_password, new_password } = body;
