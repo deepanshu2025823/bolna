@@ -208,24 +208,24 @@ export default function UsersManagement() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-mono font-medium border border-slate-200">
                         {user.bolna_sub_account_id}
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <span className="px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 text-xs font-extrabold border border-orange-100">
                         {Number(user.minutes_used || 0).toLocaleString()} Mins
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-extrabold border border-blue-100">
                         ${Number(user.amount_spent || 0).toFixed(2)}
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-2 py-4">
                       <p className="text-sm font-extrabold text-emerald-600 bg-emerald-50 inline-flex px-3 py-1.5 rounded-lg border border-emerald-100">
                         {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins Left</span>
                       </p>
