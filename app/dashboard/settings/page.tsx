@@ -15,7 +15,7 @@ export default function ClientSettings() {
   
   const [domainData, setDomainData] = useState({ custom_domain: '' });
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
-  const [domainStatus, setDomainStatus] = useState<'idle' | 'verifying' | 'connected' | 'failed'>('idle');
+  const [domainStatus, setDomainStatus] = useState<'idle' | 'generating' | 'verifying' | 'connected' | 'failed'>('idle');
 
   const [adminTargetCname, setAdminTargetCname] = useState('cname.vercel-dns.com');
 
@@ -58,8 +58,8 @@ export default function ClientSettings() {
     }
 
     if (tab === 'domain') {
-      setStatusMsg({ type: 'success', text: 'Domain record generated. Please configure your DNS settings.' });
-      setDomainStatus('idle');
+      setDomainStatus('generating');
+      setStatusMsg({ type: 'success', text: 'Domain record generated! Please complete Step 1 and Step 2.' });
       return; 
     }
 
@@ -224,7 +224,7 @@ export default function ClientSettings() {
                         setDomainData({custom_domain: e.target.value});
                         setDomainStatus('idle');
                       }} 
-                      placeholder="e.g. portal.myagency.com" 
+                      placeholder="e.g. client.myagency.com" 
                       className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" 
                     />
                     <button 
