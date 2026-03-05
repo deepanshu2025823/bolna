@@ -29,7 +29,7 @@ export async function GET() {
     const connection = await pool.getConnection();
     
     const [users]: any = await connection.query(`
-      SELECT u.id, u.name, u.email, u.role, u.company_name, u.logo_url, w.balance 
+      SELECT u.id, u.name, u.email, u.role, u.company_name, u.logo_url, u.custom_domain, w.balance 
       FROM users u
       LEFT JOIN wallets w ON u.id = w.user_id 
       WHERE u.id = ?
@@ -67,6 +67,19 @@ export async function PUT(request: Request) {
       await connection.query('UPDATE users SET company_name = ?, logo_url = ? WHERE id = ?', [body.company_name, body.logo_url, userId]);
       connection.release();
       return NextResponse.json({ success: true, message: 'Branding updated successfully' });
+    }
+
+    if (body.tab === 'domain') {
+      const [currentUser]: any = await connection.query('SELECT custom_domain FROM users WHERE id = ?', [userId]);
+      
+      if (currentUser[0]?.custom_domain) {
+        connection.release();
+        return NextResponse.json({ success: false, message: 'Domain is already locked. Contact Admin to change it.' }, { status: 400 });
+      }
+
+      await connection.query('UPDATE users SET custom_domain = ? WHERE id = ?', [body.custom_domain, userId]);
+      connection.release();
+      return NextResponse.json({ success: true, message: 'Domain locked and iFrame generated successfully.' });
     }
 
     if (body.tab === 'security') {

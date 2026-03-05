@@ -1,387 +1,294 @@
-// app/admin/settings/page.tsx
+// app/admin/users/page.tsx
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 
-function AdminSettingsContent() {
-  const [activeTab, setActiveTab] = useState('general');
+export default function UsersManagement() {
+  const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  const [generalData, setGeneralData] = useState({ portal_name: '', support_email: '', admin_name: '' });
-  const [apiData, setApiData] = useState({ bolna_api_key: '' });
-  const [securityData, setSecurityData] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [timeframe, setTimeframe] = useState('all'); 
   
-  const [domainData, setDomainData] = useState({ custom_domain: '' });
-  const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
-  const [domainStatus, setDomainStatus] = useState<'idle' | 'verifying' | 'connected' | 'failed'>('idle');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', balance: '', role: 'client' });
+  const [formStatus, setFormStatus] = useState<{ type: 'idle'|'loading'|'success'|'error', msg: string }>({ type: 'idle', msg: '' });
 
-  const [showApiKey, setShowApiKey] = useState(false);
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users?timeframe=${timeframe}`);
+      const data = await res.json();
+      if (data.success) setUsers(data.data);
+    } catch (error) {
+      console.error('Failed to fetch users');
+    }
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch('/api/admin/settings');
-        const data = await res.json();
-        if (data.success) {
-          setGeneralData({
-            portal_name: data.data.settings?.portal_name || 'HIGHVANCE',
-            support_email: data.data.settings?.support_email || 'support@company.com',
-            admin_name: data.data.admin?.name || 'Admin User'
-          });
-          setApiData({
-            bolna_api_key: data.data.settings?.bolna_api_key || ''
-          });
-          setDomainData({
-            custom_domain: '' 
-          });
-        }
-      } catch (error) {
-        console.error('Failed to load settings');
-      }
-      setIsLoading(false);
-    };
-    fetchSettings();
-  }, []);
+    fetchUsers();
+  }, [timeframe]); 
 
-  const handleSave = async (e: React.FormEvent, tab: string) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatusMsg(null);
-
-    if (tab === 'security') {
-      if (securityData.new_password !== securityData.confirm_password) {
-        setStatusMsg({ type: 'error', text: 'New passwords do not match!' });
-        return;
-      }
-      if (securityData.new_password.length < 6) {
-        setStatusMsg({ type: 'error', text: 'Password must be at least 6 characters long.' });
-        return;
-      }
-    }
-
-    if (tab === 'domain') {
-      setStatusMsg({ type: 'success', text: 'Domain record generated. Please configure your DNS settings.' });
-      setDomainStatus('idle');
-      return; 
-    }
-
-    setIsSaving(true);
-
-    let payload = { tab };
-    if (tab === 'general') payload = { ...payload, ...generalData };
-    if (tab === 'api') payload = { ...payload, ...apiData };
-    if (tab === 'security') payload = { ...payload, ...securityData };
-
+    setFormStatus({ type: 'loading', msg: '' });
     try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'PUT',
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formData),
       });
       const data = await res.json();
-
       if (data.success) {
-        setStatusMsg({ type: 'success', text: data.message || 'Settings updated successfully!' });
-        if (tab === 'security') {
-          setSecurityData({ current_password: '', new_password: '', confirm_password: '' });
-        }
-        if (tab === 'general') {
-          setTimeout(() => window.location.reload(), 1000);
-        }
-      } else {
-        setStatusMsg({ type: 'error', text: data.message || 'Failed to update settings.' });
-      }
-    } catch (error) {
-      setStatusMsg({ type: 'error', text: 'Server error. Please try again later.' });
-    }
-    
-    setIsSaving(false);
-    setTimeout(() => setStatusMsg(null), 4000);
+        setFormStatus({ type: 'success', msg: 'User created successfully!' });
+        fetchUsers();
+        setTimeout(() => { setIsCreateModalOpen(false); resetForm(); }, 1500);
+      } else setFormStatus({ type: 'error', msg: data.message });
+    } catch (error) { setFormStatus({ type: 'error', msg: 'Error creating user' }); }
   };
 
-  const verifyDomain = () => {
-    if(!domainData.custom_domain) return;
-    setIsVerifyingDomain(true);
-    setDomainStatus('verifying');
-    
-    setTimeout(() => {
-      setIsVerifyingDomain(false);
-      setDomainStatus('connected'); 
-      setStatusMsg({ type: 'success', text: 'Domain verified and connected successfully!' });
-      setTimeout(() => setStatusMsg(null), 4000);
-    }, 2500);
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setFormData({ name: user.name, email: user.email, password: '', balance: user.balance || 0, role: user.role || 'client' });
+    setFormStatus({ type: 'idle', msg: '' });
+    setIsEditModalOpen(true);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormStatus({ type: 'loading', msg: '' });
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingUser.id, ...formData }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFormStatus({ type: 'success', msg: 'User updated successfully!' });
+        fetchUsers();
+        setTimeout(() => { setIsEditModalOpen(false); resetForm(); }, 1500);
+      } else setFormStatus({ type: 'error', msg: data.message });
+    } catch (error) { setFormStatus({ type: 'error', msg: 'Error updating user' }); }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-[70vh]">
-        <svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      </div>
-    );
-  }
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+      await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
+      fetchUsers();
+    } catch (error) { alert('Failed to delete'); }
+  };
+
+  const handleClearAll = async () => {
+    if (!confirm('CRITICAL WARNING: Proceed?')) return;
+    try {
+      await fetch('/api/admin/users?action=clear_all', { method: 'DELETE' });
+      fetchUsers();
+    } catch (error) { alert('Failed to clear data'); }
+  };
+
+  const handleLoginAs = async (userId: number, userName: string) => {
+    if (!confirm(`Login as ${userName}?`)) return;
+    try {
+      const res = await fetch('/api/admin/users/login-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: userId })
+      });
+      const data = await res.json();
+      if (data.success) window.open('/dashboard', '_blank');
+    } catch (error) { alert('Error.'); }
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', email: '', password: '', balance: '', role: 'client' });
+    setFormStatus({ type: 'idle', msg: '' });
+  };
+
+
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
-      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Platform Settings</h2>
-          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage your portal configurations, domains, and security.</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">User Management</h2>
+          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage platform clients, check usage and spent amounts.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+          <button onClick={handleClearAll} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors border border-red-200 shadow-sm w-full sm:w-auto">
+            Clear All Clients
+          </button>
+          <button onClick={() => { resetForm(); setIsCreateModalOpen(true); }} className="flex-1 sm:flex-none bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center w-full sm:w-auto hover:-translate-y-0.5">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+            Add New User
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <nav className="flex flex-row lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 custom-scrollbar">
-            <button onClick={() => {setActiveTab('general'); setStatusMsg(null);}} className={`flex items-center px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'general' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
-              General Settings
-            </button>
-            <button onClick={() => {setActiveTab('api'); setStatusMsg(null);}} className={`flex items-center px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'api' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              API Integrations
-            </button>
-            <button onClick={() => {setActiveTab('domain'); setStatusMsg(null);}} className={`flex items-center px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'domain' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-              Domain Setup
-            </button>
-            <button onClick={() => {setActiveTab('security'); setStatusMsg(null);}} className={`flex items-center px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'security' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-              Security Options
-            </button>
-          </nav>
+        <div className="p-5 border-b border-gray-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="relative w-full sm:w-96">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Search users by name or email..." 
+              className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center space-x-3 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden md:block">Filter By:</span>
+            <select 
+              value={timeframe} 
+              onChange={(e) => setTimeframe(e.target.value)}
+              className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all cursor-pointer"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+          </div>
         </div>
 
-        <div className="flex-1 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          
-          {statusMsg && (
-            <div className={`m-6 p-4 rounded-xl text-sm font-bold flex items-center animate-fade-in shadow-sm ${statusMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-              {statusMsg.type === 'success' ? (
-                <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-white border-b border-gray-100">
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User Details</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mapped Domain</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mins Used</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Spent</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Mins</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {isLoading ? (
+                <tr><td colSpan={6} className="px-6 py-16 text-center"><svg className="animate-spin h-8 w-8 text-blue-600 mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></td></tr>
+              ) : filteredUsers.length === 0 ? (
+                <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-500 font-medium">No users found matching your criteria.</td></tr>
               ) : (
-                <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              )}
-              {statusMsg.text}
-            </div>
-          )}
-
-          {activeTab === 'general' && (
-            <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-2' : ''}`}>
-              <h3 className="text-xl font-bold text-slate-900 mb-6">Brand & Profile</h3>
-              <form onSubmit={(e) => handleSave(e, 'general')} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Portal Name</label>
-                    <input type="text" required value={generalData.portal_name} onChange={(e) => setGeneralData({...generalData, portal_name: e.target.value})} className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" placeholder="e.g. HIGHVANCE" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Support Email</label>
-                    <input type="email" required value={generalData.support_email} onChange={(e) => setGeneralData({...generalData, support_email: e.target.value})} className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" placeholder="support@yourdomain.com" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Admin Full Name</label>
-                  <input type="text" required value={generalData.admin_name} onChange={(e) => setGeneralData({...generalData, admin_name: e.target.value})} className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" placeholder="Your Name" />
-                </div>
-                <div className="pt-6 border-t border-gray-100 flex justify-end">
-                  <button type="submit" disabled={isSaving} className="bg-slate-900 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-slate-800 hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px]">
-                    {isSaving ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {activeTab === 'api' && (
-            <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-2' : ''}`}>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Bolna Integration</h3>
-              <p className="text-sm text-slate-500 mb-6 font-medium">Connect your master Bolna account to enable automated sub-account provisioning.</p>
-              <form onSubmit={(e) => handleSave(e, 'api')} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Bolna Enterprise API Key</label>
-                  <div className="relative">
-                    <input 
-                      type={showApiKey ? 'text' : 'password'} 
-                      value={apiData.bolna_api_key} 
-                      onChange={(e) => setApiData({...apiData, bolna_api_key: e.target.value})} 
-                      placeholder="bn-..." 
-                      className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none font-mono text-sm transition-all text-slate-900" 
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-purple-600 transition-colors focus:outline-none"
-                    >
-                      {showApiKey ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0a10.05 10.05 0 015.71-1.29c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0l3.29 3.29" /></svg>
+                filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-sm mr-4 shadow-sm border border-blue-200">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{user.name}</p>
+                          <p className="text-xs font-medium text-slate-500">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      {user.custom_domain ? (
+                        <a href={`https://${user.custom_domain}`} target="_blank" className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors inline-flex items-center">
+                          {user.custom_domain} <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
                       ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        <span className="text-xs text-slate-400 font-medium italic">Not Set</span>
                       )}
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="bg-purple-50 border border-purple-100 p-4 rounded-xl flex items-start">
-                  <svg className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <p className="text-sm text-purple-800 font-medium leading-relaxed">Your API key is securely encrypted and stored in the database. It is used to generate client sub-accounts and fetch live execution metrics.</p>
-                </div>
+                    </td>
 
-                <div className="pt-6 border-t border-gray-100 flex justify-end">
-                  <button type="submit" disabled={isSaving} className="bg-purple-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-purple-700 hover:-translate-y-0.5 transition-all shadow-lg shadow-purple-500/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px]">
-                    {isSaving ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Save API Key'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 text-xs font-extrabold border border-orange-100">
+                        {Number(user.minutes_used || 0).toLocaleString()} Mins
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-extrabold border border-blue-100">
+                        ${Number(user.amount_spent || 0).toFixed(2)}
+                      </span>
+                    </td>
 
-          {activeTab === 'domain' && (
-            <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-2' : ''}`}>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Custom Domain Mapping</h3>
-              <p className="text-sm text-slate-500 mb-6 font-medium">Link your own custom domain (e.g., admin.youragency.com) to your portal via DNS.</p>
-              
-              <form onSubmit={(e) => handleSave(e, 'domain')} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Enter Your Custom Domain</label>
-                  <div className="flex gap-3">
-                    <input 
-                      type="text" 
-                      value={domainData.custom_domain} 
-                      onChange={(e) => {
-                        setDomainData({custom_domain: e.target.value});
-                        setDomainStatus('idle'); 
-                      }} 
-                      placeholder="e.g. portal.myagency.com" 
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" 
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!domainData.custom_domain}
-                      className="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 whitespace-nowrap"
-                    >
-                      Generate Record
-                    </button>
-                  </div>
-                </div>
-
-                {domainData.custom_domain && domainStatus !== 'idle' && (
-                  <div className="bg-slate-50 border border-gray-200 p-6 rounded-2xl animate-fade-in mt-6">
-                    <h4 className="font-bold text-slate-900 mb-2">Step 1: Configure your DNS</h4>
-                    <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-                      Go to your domain provider (GoDaddy, Hostinger, Namecheap, etc.) and add the following <strong>CNAME</strong> record to your DNS settings.
-                    </p>
-                    
-                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6 shadow-sm">
-                      <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 border-b border-gray-100">
-                          <tr>
-                            <th className="px-4 py-3 font-bold text-slate-700">Type</th>
-                            <th className="px-4 py-3 font-bold text-slate-700">Name / Host</th>
-                            <th className="px-4 py-3 font-bold text-slate-700">Value / Target</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td className="px-4 py-4 font-mono font-medium text-slate-600">CNAME</td>
-                            <td className="px-4 py-4 font-mono text-slate-900 font-bold">{domainData.custom_domain.split('.')[0] === 'www' ? 'www' : domainData.custom_domain.split('.')[0]}</td>
-                            <td className="px-4 py-4 font-mono text-blue-600 font-medium flex items-center justify-between">
-                              cname.vercel-dns.com
-                              <button type="button" onClick={() => copyToClipboard('cname.vercel-dns.com')} className="text-slate-400 hover:text-slate-700 transition-colors ml-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                              </button>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <h4 className="font-bold text-slate-900 mb-2">Step 2: Verify Connection</h4>
-                    <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-                      DNS propagation can take a few minutes. Click verify when you have added the record.
-                    </p>
-                    
-                    <div className="flex items-center gap-4">
-                      <button 
-                        type="button"
-                        onClick={verifyDomain}
-                        disabled={isVerifyingDomain || domainStatus === 'connected'}
-                        className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center min-w-[160px] ${
-                          domainStatus === 'connected' 
-                            ? 'bg-emerald-100 text-emerald-700 cursor-default' 
-                            : 'bg-slate-900 text-white hover:bg-slate-800 shadow-md shadow-slate-900/20'
-                        }`}
-                      >
-                        {isVerifyingDomain ? (
-                          <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Verifying...</>
-                        ) : domainStatus === 'connected' ? (
-                          <><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg> Verified</>
-                        ) : 'Verify Connection'}
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-extrabold text-emerald-600 bg-emerald-50 inline-flex px-3 py-1.5 rounded-lg border border-emerald-100">
+                        {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins Left</span>
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
+                      <button onClick={() => handleLoginAs(user.id, user.name)} className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors border border-slate-200 shadow-sm">
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg> Login As
                       </button>
-                      
-                      {domainStatus === 'connected' && (
-                        <span className="text-sm font-bold text-emerald-600 flex items-center animate-fade-in">
-                          Domain successfully mapped!
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </form>
-            </div>
-          )}
 
-          {activeTab === 'security' && (
-            <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-2' : ''}`}>
-              <h3 className="text-xl font-bold text-slate-900 mb-6">Security Settings</h3>
-              <form onSubmit={(e) => handleSave(e, 'security')} className="space-y-6 max-w-md">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Current Password</label>
-                  <input type="password" required value={securityData.current_password} onChange={(e) => setSecurityData({...securityData, current_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition-all text-slate-900 font-medium" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">New Password</label>
-                  <input type="password" required value={securityData.new_password} onChange={(e) => setSecurityData({...securityData, new_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition-all text-slate-900 font-medium" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Confirm New Password</label>
-                  <input type="password" required value={securityData.confirm_password} onChange={(e) => setSecurityData({...securityData, confirm_password: e.target.value})} placeholder="••••••••" className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition-all text-slate-900 font-medium" />
-                </div>
-                <div className="pt-6 border-t border-gray-100">
-                  <button type="submit" disabled={isSaving} className="bg-red-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-red-700 hover:-translate-y-0.5 transition-all shadow-lg shadow-red-500/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center w-full sm:w-auto min-w-[200px]">
-                    {isSaving ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Update Password'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
+                      <button onClick={() => openEditModal(user)} className="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors" title="Edit User">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button onClick={() => handleDelete(user.id)} className="text-slate-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors" title="Delete User">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
-  );
-}
 
-export default function AdminSettings() {
-  return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center h-[70vh]">
-        <svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      </div>
-    }>
-      <AdminSettingsContent />
-    </Suspense>
+      {(isCreateModalOpen || isEditModalOpen) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => {setIsCreateModalOpen(false); setIsEditModalOpen(false);}}></div>
+          
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl relative z-10 animate-fade-in overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-900">{isEditModalOpen ? 'Edit Client Profile' : 'Add New Client'}</h3>
+              <button onClick={() => {setIsCreateModalOpen(false); setIsEditModalOpen(false);}} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm border border-gray-200 transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <form onSubmit={isEditModalOpen ? handleEditSubmit : handleCreateSubmit} className="p-6 space-y-5">
+              {formStatus.type === 'error' && <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{formStatus.msg}</div>}
+              {formStatus.type === 'success' && <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>{formStatus.msg}</div>}
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Full Name</label>
+                <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="John Doe" />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Email Address</label>
+                <input type="email" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="john@example.com" />
+              </div>
+              
+              {isEditModalOpen && (
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Allocated Minutes</label>
+                  <input type="number" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-emerald-600" value={formData.balance} onChange={(e) => setFormData({...formData, balance: e.target.value})} />
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">{isEditModalOpen ? 'New Password (Leave empty)' : 'Initial Password'}</label>
+                <input type="password" required={!isEditModalOpen} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
+              </div>
+
+              <div className="pt-2">
+                <button type="submit" disabled={formStatus.type === 'loading'} className="w-full bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-70 flex justify-center items-center">
+                  {formStatus.type === 'loading' ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : (isEditModalOpen ? 'Save Changes' : 'Create Client')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

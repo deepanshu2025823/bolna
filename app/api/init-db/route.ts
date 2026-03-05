@@ -16,6 +16,7 @@ export async function GET() {
         designation VARCHAR(255) DEFAULT 'Staff',
         company_name VARCHAR(255) DEFAULT NULL,
         logo_url VARCHAR(500) DEFAULT NULL,
+        custom_domain VARCHAR(255) DEFAULT NULL,
         bolna_sub_account_id VARCHAR(255) UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -25,6 +26,7 @@ export async function GET() {
     try { await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'client', 'staff') DEFAULT 'client'"); } catch (e) {}
     try { await connection.query("ALTER TABLE users ADD COLUMN company_name VARCHAR(255) DEFAULT NULL"); } catch (e) {}
     try { await connection.query("ALTER TABLE users ADD COLUMN logo_url VARCHAR(500) DEFAULT NULL"); } catch (e) {}
+    try { await connection.query("ALTER TABLE users ADD COLUMN custom_domain VARCHAR(255) DEFAULT NULL"); } catch (e) {}
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS plans (
@@ -111,7 +113,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Database initialized successfully with client branding columns!' 
+      message: 'Database initialized successfully with custom_domain tracking!' 
     });
 
   } catch (error: any) {
