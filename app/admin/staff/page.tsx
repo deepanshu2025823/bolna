@@ -3,6 +3,15 @@
 
 import { useState, useEffect } from 'react';
 
+const AVAILABLE_PERMISSIONS = [
+  { id: 'manage_users', label: 'Clients / Users Management' },
+  { id: 'manage_plans', label: 'Subscription Plans' },
+  { id: 'manage_billing', label: 'Billing & Payments' },
+  { id: 'manage_support', label: 'Support Inbox' },
+  { id: 'view_margins', label: 'Margin Tracking' },
+  { id: 'manage_settings', label: 'Platform Settings' },
+];
+
 export default function StaffManagement() {
   const [staff, setStaff] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -11,7 +20,9 @@ export default function StaffManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', designation: 'Support Agent' });
+  const [formData, setFormData] = useState<{name: string, email: string, password: string, designation: string, permissions: string[]}>({ 
+    name: '', email: '', password: '', designation: 'Support Agent', permissions: [] 
+  });
   const [customDesignation, setCustomDesignation] = useState('');
   
   const [formStatus, setFormStatus] = useState<{ type: 'idle'|'loading'|'success'|'error', msg: string }>({ type: 'idle', msg: '' });
@@ -31,6 +42,23 @@ export default function StaffManagement() {
   useEffect(() => {
     fetchStaff();
   }, []);
+
+  const handlePermissionToggle = (permissionId: string) => {
+    const currentPermissions = formData.permissions;
+    if (currentPermissions.includes(permissionId)) {
+      setFormData({ ...formData, permissions: currentPermissions.filter(p => p !== permissionId) });
+    } else {
+      setFormData({ ...formData, permissions: [...currentPermissions, permissionId] });
+    }
+  };
+
+  const handleSelectAllPermissions = () => {
+    if (formData.permissions.length === AVAILABLE_PERMISSIONS.length) {
+      setFormData({ ...formData, permissions: [] }); // Deselect all
+    } else {
+      setFormData({ ...formData, permissions: AVAILABLE_PERMISSIONS.map(p => p.id) }); // Select all
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,13 +97,17 @@ export default function StaffManagement() {
       setEditingStaff(staffMember);
       
       const defaultRoles = ['Support Agent', 'Technical Manager', 'Billing Specialist', 'Super Admin'];
-      if (defaultRoles.includes(staffMember.designation)) {
-        setFormData({ name: staffMember.name, email: staffMember.email, password: '', designation: staffMember.designation });
-        setCustomDesignation('');
-      } else {
-        setFormData({ name: staffMember.name, email: staffMember.email, password: '', designation: 'custom' });
-        setCustomDesignation(staffMember.designation);
-      }
+      const isDefault = defaultRoles.includes(staffMember.designation);
+      
+      setFormData({ 
+        name: staffMember.name, 
+        email: staffMember.email, 
+        password: '', 
+        designation: isDefault ? staffMember.designation : 'custom',
+        permissions: staffMember.permissions || [] 
+      });
+      setCustomDesignation(isDefault ? '' : staffMember.designation);
+      
     } else {
       resetForm();
     }
@@ -114,7 +146,7 @@ export default function StaffManagement() {
 
   const resetForm = () => {
     setEditingStaff(null);
-    setFormData({ name: '', email: '', password: '', designation: 'Support Agent' });
+    setFormData({ name: '', email: '', password: '', designation: 'Support Agent', permissions: [] });
     setCustomDesignation('');
     setFormStatus({ type: 'idle', msg: '' });
   };
@@ -135,7 +167,7 @@ export default function StaffManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Team Management</h2>
-          <p className="text-slate-500 text-sm mt-1.5 font-medium">Add staff members and assign designations to handle portal operations.</p>
+          <p className="text-slate-500 text-sm mt-1.5 font-medium">Add staff members, assign roles, and set custom permissions.</p>
         </div>
         <button onClick={() => openModal()} className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center hover:-translate-y-0.5">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
@@ -167,7 +199,7 @@ export default function StaffManagement() {
               <tr className="bg-white border-b border-gray-100">
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Staff Details</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Designation</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Joined Date</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Access Level</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -195,8 +227,14 @@ export default function StaffManagement() {
                         {member.designation || 'Staff'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 font-medium">
-                      {new Date(member.created_at).toLocaleDateString()}
+                    <td className="px-6 py-4">
+                      {member.permissions && member.permissions.length === AVAILABLE_PERMISSIONS.length ? (
+                        <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">Full Access</span>
+                      ) : member.permissions && member.permissions.length > 0 ? (
+                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">{member.permissions.length} Modules</span>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">No Access</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
                       <button 
@@ -223,72 +261,104 @@ export default function StaffManagement() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={handleCloseModal}></div>
           
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl relative z-10 animate-fade-in overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative z-10 animate-fade-in flex flex-col max-h-[90vh]">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-3xl shrink-0">
               <h3 className="text-lg font-bold text-slate-900">{editingStaff ? 'Edit Staff Profile' : 'Add New Staff Member'}</h3>
               <button type="button" onClick={handleCloseModal} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm border border-gray-200 transition-all">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {formStatus.type === 'error' && <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{formStatus.msg}</div>}
-              {formStatus.type === 'success' && <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>{formStatus.msg}</div>}
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              <form id="staff-form" onSubmit={handleSubmit} className="space-y-5">
+                {formStatus.type === 'error' && <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{formStatus.msg}</div>}
+                
+                <div className="grid grid-cols-1 gap-5">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Full Name</label>
+                    <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Jane Doe" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Email Address</label>
+                    <input type="email" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="jane@example.com" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Designation / Role</label>
+                    <select 
+                      required 
+                      className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer font-medium text-slate-700" 
+                      value={formData.designation} 
+                      onChange={(e) => setFormData({...formData, designation: e.target.value})}
+                    >
+                      <option value="Support Agent">Support Agent</option>
+                      <option value="Technical Manager">Technical Manager</option>
+                      <option value="Billing Specialist">Billing Specialist</option>
+                      <option value="Super Admin">Super Admin</option>
+                      <option value="custom" className="font-bold text-blue-600">+ Add Custom Designation</option>
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Full Name</label>
-                <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Jane Doe" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Email Address</label>
-                <input type="email" required className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="jane@example.com" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Designation / Role</label>
-                <select 
-                  required 
-                  className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer font-medium text-slate-700" 
-                  value={formData.designation} 
-                  onChange={(e) => setFormData({...formData, designation: e.target.value})}
-                >
-                  <option value="Support Agent">Support Agent</option>
-                  <option value="Technical Manager">Technical Manager</option>
-                  <option value="Billing Specialist">Billing Specialist</option>
-                  <option value="Super Admin">Super Admin</option>
-                  <option value="custom" className="font-bold text-blue-600">+ Add Custom Designation</option>
-                </select>
-              </div>
+                  {formData.designation === 'custom' && (
+                    <div className="animate-fade-in -mt-2">
+                      <label className="block text-xs font-bold text-blue-600 mb-1.5">Type Custom Designation</label>
+                      <input 
+                        type="text" 
+                        required 
+                        className="w-full px-4 py-3 bg-blue-50/50 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900" 
+                        value={customDesignation} 
+                        onChange={(e) => setCustomDesignation(e.target.value)} 
+                        placeholder="e.g. Marketing Head" 
+                      />
+                    </div>
+                  )}
 
-              {formData.designation === 'custom' && (
-                <div className="animate-fade-in -mt-2">
-                  <label className="block text-xs font-bold text-blue-600 mb-1.5">Type Custom Designation</label>
-                  <input 
-                    type="text" 
-                    required 
-                    className="w-full px-4 py-3 bg-blue-50/50 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900" 
-                    value={customDesignation} 
-                    onChange={(e) => setCustomDesignation(e.target.value)} 
-                    placeholder="e.g. Marketing Head" 
-                  />
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">{editingStaff ? 'New Password (Optional)' : 'Initial Password'}</label>
+                    <input type="password" required={!editingStaff} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="flex justify-between items-center mb-3 mt-2">
+                      <label className="block text-sm font-bold text-slate-900">Module Access Permissions</label>
+                      <button type="button" onClick={handleSelectAllPermissions} className="text-xs font-bold text-blue-600 hover:text-blue-800">
+                        {formData.permissions.length === AVAILABLE_PERMISSIONS.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    
+                    <div className="bg-slate-50 border border-gray-200 rounded-xl p-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {AVAILABLE_PERMISSIONS.map((perm) => (
+                          <label key={perm.id} className="flex items-center space-x-3 cursor-pointer group">
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.permissions.includes(perm.id) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300 group-hover:border-blue-400'}`}>
+                              {formData.permissions.includes(perm.id) && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
+                            </div>
+                            <input 
+                              type="checkbox" 
+                              className="hidden" 
+                              checked={formData.permissions.includes(perm.id)} 
+                              onChange={() => handlePermissionToggle(perm.id)} 
+                            />
+                            <span className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">{perm.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
-              )}
+              </form>
+            </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">{editingStaff ? 'New Password (Optional)' : 'Initial Password'}</label>
-                <input type="password" required={!editingStaff} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
-              </div>
-
-              <div className="pt-2">
-                <button type="submit" disabled={formStatus.type === 'loading'} className="w-full bg-slate-900 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-70 flex justify-center items-center hover:-translate-y-0.5">
-                  {formStatus.type === 'loading' ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : (editingStaff ? 'Save Changes' : 'Add Staff Member')}
-                </button>
-              </div>
-            </form>
+            <div className="p-6 border-t border-gray-100 shrink-0">
+              <button form="staff-form" type="submit" disabled={formStatus.type === 'loading'} className="w-full bg-slate-900 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-70 flex justify-center items-center">
+                {formStatus.type === 'loading' ? <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : (editingStaff ? 'Save Changes' : 'Create Staff Member')}
+              </button>
+            </div>
           </div>
         </div>
       )}

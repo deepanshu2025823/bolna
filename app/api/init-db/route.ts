@@ -14,6 +14,7 @@ export async function GET() {
         password VARCHAR(255) NOT NULL,
         role ENUM('admin', 'client', 'staff') DEFAULT 'client',
         designation VARCHAR(255) DEFAULT 'Staff',
+        permissions TEXT DEFAULT NULL,
         company_name VARCHAR(255) DEFAULT NULL,
         logo_url VARCHAR(500) DEFAULT NULL,
         custom_domain VARCHAR(255) DEFAULT NULL,
@@ -27,6 +28,7 @@ export async function GET() {
     try { await connection.query("ALTER TABLE users ADD COLUMN company_name VARCHAR(255) DEFAULT NULL"); } catch (e) {}
     try { await connection.query("ALTER TABLE users ADD COLUMN logo_url VARCHAR(500) DEFAULT NULL"); } catch (e) {}
     try { await connection.query("ALTER TABLE users ADD COLUMN custom_domain VARCHAR(255) DEFAULT NULL"); } catch (e) {}
+    try { await connection.query("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT NULL"); } catch (e) {}
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS plans (
@@ -113,7 +115,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Database initialized successfully with custom_domain tracking!' 
+      message: 'Database initialized successfully with Staff Permissions logic!' 
     });
 
   } catch (error: any) {
