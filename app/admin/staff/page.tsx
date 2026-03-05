@@ -267,6 +267,7 @@ export default function StaffManagement() {
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative z-10 animate-fade-in flex flex-col max-h-[90vh]">
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50 rounded-t-3xl shrink-0">
               <h3 className="text-lg font-bold text-slate-900">{editingStaff ? 'Edit Staff Profile' : 'Add New Staff Member'}</h3>
+              {/* 🔴 FIXED: Added type="button" to prevent form submission on close */}
               <button type="button" onClick={handleCloseModal} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm border border-gray-200 transition-all">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -322,6 +323,7 @@ export default function StaffManagement() {
                     <input type="password" required={!editingStaff} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
                   </div>
 
+                  {/* Module Permissions Section */}
                   <div className="pt-2 border-t border-gray-100">
                     <div className="flex justify-between items-center mb-3 mt-2">
                       <label className="block text-sm font-bold text-slate-900">Module Access Permissions</label>
