@@ -135,7 +135,7 @@ export default function StaffManagement() {
       
       if (data.success) {
         const urlName = userName.replace(/\s+/g, '_').toLowerCase();
-        window.open(`/admin/dashboard?secret_login=${urlName}`, '_blank');
+        window.open(`/admin/dashboard?secret_login=${urlName}`);
       } else {
         alert(data.message || 'Failed to login as staff');
       }
