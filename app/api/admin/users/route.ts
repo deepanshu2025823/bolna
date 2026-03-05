@@ -3,20 +3,57 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const timeframe = searchParams.get('timeframe') || 'all';
+
+    let timeFilter = '';
+    if (timeframe === 'today') {
+      timeFilter = 'AND t.created_at >= CURDATE()';
+    } else if (timeframe === 'week') {
+      timeFilter = 'AND t.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+    } else if (timeframe === 'month') {
+      timeFilter = 'AND t.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+    }
+
     const connection = await pool.getConnection();
-    const [users]: any = await connection.query(`
-      SELECT u.id, u.name, u.email, u.bolna_sub_account_id, u.created_at, w.balance 
-      FROM users u 
-      LEFT JOIN wallets w ON u.id = w.user_id 
+
+    const query = `
+      SELECT 
+        u.id, 
+        u.name, 
+        u.email, 
+        u.role, 
+        u.bolna_sub_account_id, 
+        u.created_at,
+        COALESCE(w.balance, 0) as balance,
+        
+        -- Calculated Total Spent (Filtered by timeframe from transactions table)
+        (
+          SELECT COALESCE(SUM(amount), 0) 
+          FROM transactions t 
+          WHERE t.user_id = u.id AND t.status = 'success' ${timeFilter}
+        ) as amount_spent,
+        
+        -- Calculated Minutes Used 
+        -- (Currently defaults to 0 until execution logs table is linked)
+        (
+           SELECT 0
+        ) as minutes_used
+
+      FROM users u
+      LEFT JOIN wallets w ON u.id = w.user_id
       WHERE u.role = 'client'
       ORDER BY u.created_at DESC
-    `);
+    `;
+
+    const [users]: any = await connection.query(query);
     connection.release();
 
     return NextResponse.json({ success: true, data: users });
   } catch (error: any) {
+    console.error('Users fetch error:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

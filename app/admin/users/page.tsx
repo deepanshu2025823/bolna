@@ -8,6 +8,8 @@ export default function UsersManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  const [timeframe, setTimeframe] = useState('all'); 
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -18,7 +20,7 @@ export default function UsersManagement() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch(`/api/admin/users?timeframe=${timeframe}`);
       const data = await res.json();
       if (data.success) setUsers(data.data);
     } catch (error) {
@@ -29,7 +31,7 @@ export default function UsersManagement() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [timeframe]); 
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,7 +128,7 @@ export default function UsersManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">User Management</h2>
-          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage all platform clients, update their minutes, or remove inactive accounts.</p>
+          <p className="text-slate-500 text-sm mt-1.5 font-medium">Manage platform clients, check usage and spent amounts.</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
           <button 
@@ -146,8 +148,7 @@ export default function UsersManagement() {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        
-        <div className="p-5 border-b border-gray-100 bg-slate-50/50 flex justify-between items-center">
+        <div className="p-5 border-b border-gray-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-96">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -160,7 +161,20 @@ export default function UsersManagement() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <span className="hidden sm:block text-xs font-bold text-slate-400 uppercase tracking-wider">{filteredUsers.length} Users</span>
+
+          <div className="flex items-center space-x-3 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden md:block">Filter By:</span>
+            <select 
+              value={timeframe} 
+              onChange={(e) => setTimeframe(e.target.value)}
+              className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all cursor-pointer"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -169,15 +183,17 @@ export default function UsersManagement() {
               <tr className="bg-white border-b border-gray-100">
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User Details</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Bolna Sub-Account</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mins Used</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Spent</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Mins</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading ? (
-                <tr><td colSpan={4} className="px-6 py-16 text-center"><svg className="animate-spin h-8 w-8 text-blue-600 mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></td></tr>
+                <tr><td colSpan={6} className="px-6 py-16 text-center"><svg className="animate-spin h-8 w-8 text-blue-600 mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-16 text-center text-slate-500 font-medium">No users found matching your criteria.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-500 font-medium">No users found matching your criteria.</td></tr>
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -197,17 +213,28 @@ export default function UsersManagement() {
                         {user.bolna_sub_account_id}
                       </span>
                     </td>
+
                     <td className="px-6 py-4">
-                      <p className="text-sm font-extrabold text-emerald-600 bg-emerald-50 inline-flex px-3 py-1 rounded-lg border border-emerald-100">
-                        {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins</span>
+                      <span className="px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 text-xs font-extrabold border border-orange-100">
+                        {Number(user.minutes_used || 0).toLocaleString()} Mins
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-extrabold border border-blue-100">
+                        ${Number(user.amount_spent || 0).toFixed(2)}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-extrabold text-emerald-600 bg-emerald-50 inline-flex px-3 py-1.5 rounded-lg border border-emerald-100">
+                        {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins Left</span>
                       </p>
                     </td>
                     <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
-                      
                       <button 
                         onClick={() => handleLoginAs(user.id, user.name)}
                         title="Login as this user in a new tab"
-                        className="flex items-center text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200 shadow-sm"
+                        className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors border border-slate-200 shadow-sm"
                       >
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
                         Login As
