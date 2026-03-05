@@ -87,10 +87,7 @@ export default function StaffManagement() {
       if (data.success) {
         setFormStatus({ type: 'success', msg: data.message });
         fetchStaff();
-        setTimeout(() => { 
-          setIsModalOpen(false); 
-          resetForm(); 
-        }, 1500);
+        setTimeout(() => { handleCloseModal(); }, 1500);
       } else setFormStatus({ type: 'error', msg: data.message });
     } catch (error) { setFormStatus({ type: 'error', msg: 'Something went wrong.' }); }
   };
@@ -158,9 +155,7 @@ export default function StaffManagement() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setTimeout(() => {
-      resetForm();
-    }, 200); 
+    resetForm();
   };
 
   const filteredStaff = staff.filter(member => 
@@ -277,7 +272,11 @@ export default function StaffManagement() {
               
               <button 
                 type="button" 
-                onClick={(e) => { e.preventDefault(); handleCloseModal(); }} 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  e.stopPropagation(); 
+                  handleCloseModal(); 
+                }} 
                 className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm border border-gray-200 transition-all"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -287,6 +286,7 @@ export default function StaffManagement() {
             <div className="p-6 overflow-y-auto custom-scrollbar">
               <form id="staff-form" onSubmit={handleSubmit} className="space-y-5">
                 {formStatus.type === 'error' && <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{formStatus.msg}</div>}
+                {formStatus.type === 'success' && <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm rounded-xl font-bold flex items-center"><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>{formStatus.msg}</div>}
                 
                 <div className="grid grid-cols-1 gap-5">
                   <div>
