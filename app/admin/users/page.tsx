@@ -230,7 +230,7 @@ export default function UsersManagement() {
                         {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins Left</span>
                       </p>
                     </td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
+                    <td className="px-2 py-4 text-right flex items-center justify-end space-x-2">
                       <button 
                         onClick={() => handleLoginAs(user.id, user.name)}
                         title="Login as this user in a new tab"
