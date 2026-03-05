@@ -3,6 +3,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 function DashboardSkeleton() {
   return (
@@ -19,14 +20,29 @@ function DashboardContent() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('Loading...');
+  const router = useRouter();
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('secret_login')) {
+      url.searchParams.delete('secret_login');
+      window.history.replaceState({}, '', url.toString());
+    }
+
     const fetchDashboardDataAndProfile = async () => {
       try {
         const profileRes = await fetch('/api/user/profile');
         const profileData = await profileRes.json();
+        
         if (profileData.success) {
+          if (profileData.data.role === 'client') {
+            router.push('/dashboard');
+            return;
+          }
           setUserName(profileData.data.name);
+        } else {
+           router.push('/login');
+           return;
         }
 
         const res = await fetch('/api/admin/dashboard');
@@ -39,8 +55,9 @@ function DashboardContent() {
       }
       setIsLoading(false);
     };
+    
     fetchDashboardDataAndProfile();
-  }, []);
+  }, [router]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
