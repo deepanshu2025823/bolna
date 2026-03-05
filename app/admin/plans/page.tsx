@@ -2,20 +2,58 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function PlansManagement() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false); 
+  const router = useRouter();
   
   const [formData, setFormData] = useState<{name: string, price: string, allocated_credits: string, features: string[]}>({ 
     name: '', price: '', allocated_credits: '', features: [''] 
   });
   const [formStatus, setFormStatus] = useState<{ type: 'idle'|'loading'|'success'|'error', msg: string }>({ type: 'idle', msg: '' });
 
-  const fetchPlans = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    const fetchAccessAndPlans = async () => {
+      try {
+        setIsLoading(true);
+        
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (!profileData.success) {
+          router.push('/login');
+          return;
+        }
+
+        const role = profileData.data.role;
+        const permissions = profileData.data.permissions || [];
+
+        if (role === 'admin' || permissions.includes('manage_plans')) {
+          setHasAccess(true);
+          
+          const res = await fetch('/api/admin/plans');
+          const data = await res.json();
+          if (data.success) setPlans(data.data);
+        } else {
+          router.push('/admin/dashboard');
+          return;
+        }
+
+      } catch (error) {
+        console.error('Failed to verify access or fetch plans');
+      }
+      setIsLoading(false);
+    };
+
+    fetchAccessAndPlans();
+  }, [router]);
+
+  const fetchOnlyPlans = async () => {
     try {
       const res = await fetch('/api/admin/plans');
       const data = await res.json();
@@ -23,12 +61,7 @@ export default function PlansManagement() {
     } catch (error) {
       console.error('Failed to fetch plans');
     }
-    setIsLoading(false);
   };
-
-  useEffect(() => {
-    fetchPlans();
-  }, []);
 
   const handleFeatureChange = (index: number, value: string) => {
     const newFeatures = [...formData.features];
@@ -65,7 +98,7 @@ export default function PlansManagement() {
       
       if (data.success) {
         setFormStatus({ type: 'success', msg: data.message });
-        fetchPlans();
+        fetchOnlyPlans();
         setTimeout(() => { setIsModalOpen(false); resetForm(); }, 1500);
       } else {
         setFormStatus({ type: 'error', msg: data.message });
@@ -94,7 +127,7 @@ export default function PlansManagement() {
     if (!confirm('Are you sure you want to delete this plan?')) return;
     try {
       await fetch(`/api/admin/plans?id=${id}`, { method: 'DELETE' });
-      fetchPlans();
+      fetchOnlyPlans();
     } catch (error) {
       alert('Failed to delete plan');
     }
@@ -105,6 +138,12 @@ export default function PlansManagement() {
     setFormData({ name: '', price: '', allocated_credits: '', features: [''] });
     setFormStatus({ type: 'idle', msg: '' });
   };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
+  }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
@@ -120,9 +159,7 @@ export default function PlansManagement() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 pt-2">
-        {isLoading ? (
-          <div className="col-span-3 py-20 flex justify-center"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>
-        ) : plans.length === 0 ? (
+        {plans.length === 0 ? (
           <div className="col-span-3 text-center py-16 bg-white rounded-3xl border border-dashed border-gray-200">
             <p className="text-slate-500 font-medium">No plans created yet. Click above to create one.</p>
           </div>

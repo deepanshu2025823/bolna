@@ -2,30 +2,55 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function MarginTracking() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false); 
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchMargins = async () => {
+    const fetchAccessAndMargins = async () => {
       try {
-        const res = await fetch('/api/admin/margins');
-        const json = await res.json();
-        if (json.success) {
-          setData(json.data);
+        setIsLoading(true);
+        
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (!profileData.success) {
+          router.push('/login');
+          return;
         }
+
+        const role = profileData.data.role;
+        const permissions = profileData.data.permissions || [];
+
+        if (role === 'admin' || permissions.includes('view_margins')) {
+          setHasAccess(true);
+          
+          const res = await fetch('/api/admin/margins');
+          const json = await res.json();
+          if (json.success) {
+            setData(json.data);
+          }
+        } else {
+          router.push('/admin/dashboard');
+          return;
+        }
+
       } catch (error) {
-        console.error('Failed to fetch margin data');
+        console.error('Failed to verify access or fetch margin data');
       }
       setIsLoading(false);
     };
-    fetchMargins();
-  }, []);
+
+    fetchAccessAndMargins();
+  }, [router]);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-[70vh]">
         <svg className="animate-spin h-10 w-10 text-emerald-600" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -33,6 +58,8 @@ export default function MarginTracking() {
       </div>
     );
   }
+
+  if (!hasAccess) return null;
 
   const totalRevenue = data?.totalRevenue || 0;
   const totalBolnaCost = data?.totalBolnaCost || 0;
@@ -50,7 +77,7 @@ export default function MarginTracking() {
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Margin & Profit <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">Tracking</span>
           </h2>
-          <p className="text-slate-500 text-sm sm:text-base mt-1.5 font-medium">Real-time revenue versus Bolna API execution costs based on actual agent usage.</p>
+          <p className="text-slate-500 text-sm sm:text-base mt-1.5 font-medium">Real-time revenue versus backend API execution costs based on actual usage.</p>
         </div>
         
         <div className="relative z-10 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl border border-emerald-100 font-bold text-sm flex items-center shadow-sm">
@@ -77,9 +104,9 @@ export default function MarginTracking() {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" /></svg>
             </div>
           </div>
-          <h3 className="text-sm font-semibold text-slate-500 mb-1">Bolna API Costs</h3>
+          <h3 className="text-sm font-semibold text-slate-500 mb-1">Backend API Costs</h3>
           <p className="text-3xl font-extrabold text-slate-900">${totalBolnaCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-          <p className="text-xs text-slate-400 mt-2 font-medium">Billed by Bolna backend</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium">Billed by provider</p>
         </div>
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
