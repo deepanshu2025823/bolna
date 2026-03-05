@@ -29,11 +29,13 @@ export async function GET() {
     const connection = await pool.getConnection();
     
     const [users]: any = await connection.query(`
-      SELECT u.id, u.name, u.email, u.role, u.company_name, u.logo_url, u.custom_domain, w.balance 
+      SELECT u.id, u.name, u.email, u.role, u.company_name, u.logo_url, u.custom_domain, u.permissions, w.balance 
       FROM users u
       LEFT JOIN wallets w ON u.id = w.user_id 
       WHERE u.id = ?
     `, [userId]);
+    
+    const [settings]: any = await connection.query('SELECT custom_domain FROM settings LIMIT 1');
     
     connection.release();
 
@@ -41,7 +43,24 @@ export async function GET() {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: users[0] });
+    let parsedPermissions = [];
+    if (users[0].role === 'staff' && users[0].permissions) {
+       try {
+         parsedPermissions = JSON.parse(users[0].permissions);
+       } catch (e) {
+         parsedPermissions = [];
+       }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      data: {
+        ...users[0],
+        permissions: parsedPermissions,
+        admin_target_domain: settings && settings.length > 0 && settings[0].custom_domain ? settings[0].custom_domain : 'cname.vercel-dns.com'
+      } 
+    });
+
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
