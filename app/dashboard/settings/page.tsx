@@ -14,7 +14,10 @@ export default function ClientSettings() {
   const [brandData, setBrandData] = useState({ company_name: '', logo_url: '' });
   
   const [domainData, setDomainData] = useState({ custom_domain: '' });
-  const [domainLocked, setDomainLocked] = useState(false);
+  const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
+  const [domainStatus, setDomainStatus] = useState<'idle' | 'verifying' | 'connected' | 'failed'>('idle');
+
+  const [adminTargetCname, setAdminTargetCname] = useState('cname.vercel-dns.com');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -27,10 +30,8 @@ export default function ClientSettings() {
             company_name: data.data.company_name || '',
             logo_url: data.data.logo_url || ''
           });
-          
-          if (data.data.custom_domain) {
-             setDomainData({ custom_domain: data.data.custom_domain });
-             setDomainLocked(true);
+          if (data.data.admin_target_domain) {
+            setAdminTargetCname(data.data.admin_target_domain);
           }
         }
       } catch (error) {
@@ -56,13 +57,18 @@ export default function ClientSettings() {
       }
     }
 
+    if (tab === 'domain') {
+      setStatusMsg({ type: 'success', text: 'Domain record generated. Please configure your DNS settings.' });
+      setDomainStatus('idle');
+      return; 
+    }
+
     setIsSaving(true);
     let payload: any = { tab };
     
     if (tab === 'profile') payload = { ...payload, name: profileData.name };
     if (tab === 'security') payload = { ...payload, currentPassword: securityData.currentPassword, newPassword: securityData.newPassword };
     if (tab === 'branding') payload = { ...payload, company_name: brandData.company_name, logo_url: brandData.logo_url };
-    if (tab === 'domain') payload = { ...payload, custom_domain: domainData.custom_domain };
 
     try {
       const res = await fetch('/api/user/profile', {
@@ -75,11 +81,6 @@ export default function ClientSettings() {
       if (data.success) {
         setStatusMsg({ type: 'success', text: data.message });
         if (tab === 'security') setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        
-        if (tab === 'domain') {
-          setDomainLocked(true);
-        }
-
         if (tab === 'branding') {
           setTimeout(() => window.location.reload(), 1000);
         }
@@ -94,23 +95,42 @@ export default function ClientSettings() {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
-  const copyToClipboard = () => {
-    const code = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>${brandData.company_name || 'Client Portal'}</title>
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; }
-    </style>
-</head>
-<body>
-    <iframe src="https://bolna-pi.vercel.app"></iframe>
-</body>
-</html>`;
-    navigator.clipboard.writeText(code);
-    alert('iFrame Code copied to clipboard!');
+  const verifyDomain = async () => {
+    if(!domainData.custom_domain) return;
+    setIsVerifyingDomain(true);
+    setDomainStatus('verifying');
+    setStatusMsg(null);
+    
+    try {
+      const res = await fetch('/api/verify-dns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          domain: domainData.custom_domain, 
+          expectedTarget: adminTargetCname 
+        })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setDomainStatus('connected'); 
+        setStatusMsg({ type: 'success', text: 'Domain verified and connected successfully!' });
+      } else {
+        setDomainStatus('failed');
+        setStatusMsg({ type: 'error', text: data.message });
+      }
+    } catch (error) {
+      setDomainStatus('failed');
+      setStatusMsg({ type: 'error', text: 'Failed to verify DNS. Please try again later.' });
+    }
+    
+    setIsVerifyingDomain(false);
+    setTimeout(() => setStatusMsg(null), 6000);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard!');
   };
 
   if (isLoading) {
@@ -141,7 +161,7 @@ export default function ClientSettings() {
             
             <button onClick={() => {setActiveTab('domain'); setStatusMsg(null);}} className={`flex items-center px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'domain' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-              Domain Mapping
+              Domain Setup
             </button>
 
             <button onClick={() => {setActiveTab('security'); setStatusMsg(null);}} className={`flex items-center px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-200 whitespace-nowrap ${activeTab === 'security' ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-white hover:shadow-sm hover:text-slate-900 border border-transparent'}`}>
@@ -209,71 +229,100 @@ export default function ClientSettings() {
 
           {activeTab === 'domain' && (
             <div className={`p-6 sm:p-10 animate-fade-in ${statusMsg ? 'pt-0' : ''}`}>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Host Portal on Your Domain</h3>
-              <p className="text-sm text-slate-500 mb-6 font-medium">Link this portal to your own domain using a secure iFrame setup.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Custom Domain Mapping</h3>
+              <p className="text-sm text-slate-500 mb-6 font-medium">Link your own custom domain (e.g., portal.myagency.com) to your workspace via DNS.</p>
               
               <form onSubmit={(e) => handleSave(e, 'domain')} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Your Custom Domain URL</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Enter Your Custom Domain</label>
                   <div className="flex gap-3">
                     <input 
                       type="text" 
-                      required
                       value={domainData.custom_domain} 
-                      onChange={(e) => setDomainData({custom_domain: e.target.value})} 
-                      placeholder="e.g. portal.myagency.com" 
-                      disabled={domainLocked} // Locked once saved
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900 disabled:opacity-60 disabled:cursor-not-allowed" 
+                      onChange={(e) => {
+                        setDomainData({custom_domain: e.target.value});
+                        setDomainStatus('idle');
+                      }} 
+                      placeholder="e.g. client.myagency.com" 
+                      className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" 
                     />
-                    {!domainLocked && (
-                      <button 
-                        type="submit"
-                        disabled={isSaving || !domainData.custom_domain}
-                        className="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {isSaving ? 'Saving...' : 'Lock & Generate'}
-                      </button>
-                    )}
+                    <button 
+                      type="submit"
+                      disabled={!domainData.custom_domain}
+                      className="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      Generate Record
+                    </button>
                   </div>
-                  {domainLocked ? (
-                    <p className="text-xs text-emerald-600 mt-2 font-bold flex items-center">
-                      <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
-                      Domain locked successfully. Contact admin if you need to change this.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-amber-600 mt-2 font-medium">Warning: You can only set your domain ONCE. Please verify spelling.</p>
-                  )}
                 </div>
 
-                {domainLocked && (
-                  <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl animate-fade-in mt-6">
-                    <h4 className="font-bold text-blue-900 mb-2">Your HTML iFrame Code</h4>
+                {domainData.custom_domain && domainStatus !== 'idle' && (
+                  <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl animate-fade-in mt-6">
+                    <h4 className="font-bold text-blue-900 mb-2">Step 1: Configure your DNS</h4>
                     <p className="text-sm text-blue-800 mb-4 leading-relaxed">
-                      Copy and paste this code into the <code>index.html</code> of your domain (<strong>{domainData.custom_domain}</strong>) to display your portal.
+                      Go to your domain provider (GoDaddy, Hostinger, Namecheap, etc.) and add the following <strong>CNAME</strong> record to your DNS settings.
                     </p>
-                    <div className="relative">
-                      <pre className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs overflow-x-auto font-mono">
-{`<!DOCTYPE html>
-<html>
-<head>
-    <title>${brandData.company_name || 'Client Portal'}</title>
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; }
-    </style>
-</head>
-<body>
-    <iframe src="https://bolna-pi.vercel.app"></iframe>
-</body>
-</html>`}
-                      </pre>
+                    
+                    <div className="bg-white border border-blue-100 rounded-xl overflow-hidden mb-6 shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 border-b border-gray-100">
+                          <tr>
+                            <th className="px-4 py-3 font-bold text-slate-700">Type</th>
+                            <th className="px-4 py-3 font-bold text-slate-700">Name / Host</th>
+                            <th className="px-4 py-3 font-bold text-slate-700">Value / Target</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="px-4 py-4 font-mono font-medium text-slate-600">CNAME</td>
+                            <td className="px-4 py-4 font-mono text-slate-900 font-bold">{domainData.custom_domain.split('.')[0] === 'www' ? 'www' : domainData.custom_domain.split('.')[0]}</td>
+                            
+                            <td className="px-4 py-4 font-mono text-blue-600 font-medium flex items-center justify-between">
+                              {adminTargetCname}
+                              <button type="button" onClick={() => copyToClipboard(adminTargetCname)} className="text-slate-400 hover:text-blue-600 transition-colors ml-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <h4 className="font-bold text-blue-900 mb-2">Step 2: Verify Connection</h4>
+                    <p className="text-sm text-blue-800 mb-4 leading-relaxed">
+                      DNS propagation can take a few minutes. Click verify when you have added the record.
+                    </p>
+                    
+                    <div className="flex items-center gap-4">
                       <button 
                         type="button"
-                        onClick={copyToClipboard}
-                        className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                        onClick={verifyDomain}
+                        disabled={isVerifyingDomain || domainStatus === 'connected'}
+                        className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center min-w-[160px] ${
+                          domainStatus === 'connected' 
+                            ? 'bg-emerald-500 text-white cursor-default shadow-md shadow-emerald-500/20' 
+                            : 'bg-slate-900 text-white hover:bg-slate-800 shadow-md shadow-slate-900/20'
+                        }`}
                       >
-                        Copy Code
+                        {isVerifyingDomain ? (
+                          <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Verifying...</>
+                        ) : domainStatus === 'connected' ? (
+                          <><svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg> Verified</>
+                        ) : 'Verify Connection'}
                       </button>
+                      
+                      {domainStatus === 'connected' && (
+                        <span className="text-sm font-bold text-emerald-700 flex items-center animate-fade-in">
+                          Domain successfully mapped!
+                        </span>
+                      )}
+                      
+                      {domainStatus === 'failed' && (
+                        <span className="text-sm font-bold text-red-600 flex items-center animate-fade-in">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                          Verification Failed
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
