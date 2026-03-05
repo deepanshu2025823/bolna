@@ -2,23 +2,60 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function UsersManagement() {
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
   const [timeframe, setTimeframe] = useState('all'); 
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const router = useRouter();
   
   const [formData, setFormData] = useState({ name: '', email: '', password: '', balance: '', role: 'client' });
   const [formStatus, setFormStatus] = useState<{ type: 'idle'|'loading'|'success'|'error', msg: string }>({ type: 'idle', msg: '' });
 
-  const fetchUsers = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    const fetchAccessAndUsers = async () => {
+      try {
+        setIsLoading(true);
+        
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (!profileData.success) {
+          router.push('/login');
+          return;
+        }
+
+        const role = profileData.data.role;
+        const permissions = profileData.data.permissions || [];
+
+        if (role === 'admin' || permissions.includes('manage_users')) {
+          setHasAccess(true);
+          
+          const res = await fetch(`/api/admin/users?timeframe=${timeframe}`);
+          const data = await res.json();
+          if (data.success) setUsers(data.data);
+        } else {
+          router.push('/admin/dashboard');
+          return;
+        }
+
+      } catch (error) {
+        console.error('Failed to verify access or fetch users');
+      }
+      setIsLoading(false);
+    };
+
+    fetchAccessAndUsers();
+  }, [timeframe, router]); 
+
+  const fetchOnlyUsers = async () => {
     try {
       const res = await fetch(`/api/admin/users?timeframe=${timeframe}`);
       const data = await res.json();
@@ -26,12 +63,7 @@ export default function UsersManagement() {
     } catch (error) {
       console.error('Failed to fetch users');
     }
-    setIsLoading(false);
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, [timeframe]); 
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +77,7 @@ export default function UsersManagement() {
       const data = await res.json();
       if (data.success) {
         setFormStatus({ type: 'success', msg: 'User created successfully!' });
-        fetchUsers();
+        fetchOnlyUsers();
         setTimeout(() => { setIsCreateModalOpen(false); resetForm(); }, 1500);
       } else setFormStatus({ type: 'error', msg: data.message });
     } catch (error) { setFormStatus({ type: 'error', msg: 'Error creating user' }); }
@@ -70,7 +102,7 @@ export default function UsersManagement() {
       const data = await res.json();
       if (data.success) {
         setFormStatus({ type: 'success', msg: 'User updated successfully!' });
-        fetchUsers();
+        fetchOnlyUsers();
         setTimeout(() => { setIsEditModalOpen(false); resetForm(); }, 1500);
       } else setFormStatus({ type: 'error', msg: data.message });
     } catch (error) { setFormStatus({ type: 'error', msg: 'Error updating user' }); }
@@ -80,7 +112,7 @@ export default function UsersManagement() {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
     try {
       await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
-      fetchUsers();
+      fetchOnlyUsers();
     } catch (error) { alert('Failed to delete'); }
   };
 
@@ -88,7 +120,7 @@ export default function UsersManagement() {
     if (!confirm('CRITICAL WARNING: This will permanently delete ALL clients and their data. Proceed?')) return;
     try {
       await fetch('/api/admin/users?action=clear_all', { method: 'DELETE' });
-      fetchUsers();
+      fetchOnlyUsers();
     } catch (error) { alert('Failed to clear data'); }
   };
 
@@ -122,6 +154,12 @@ export default function UsersManagement() {
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
+  }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="space-y-6 sm:space-y-8 font-sans animate-fade-in">
@@ -182,7 +220,7 @@ export default function UsersManagement() {
             <thead>
               <tr className="bg-white border-b border-gray-100">
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User Details</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Bolna Sub-Account</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mapped Domain</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mins Used</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Spent</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Available Mins</th>
@@ -190,9 +228,7 @@ export default function UsersManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
-                <tr><td colSpan={6} className="px-6 py-16 text-center"><svg className="animate-spin h-8 w-8 text-blue-600 mx-auto" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></td></tr>
-              ) : filteredUsers.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-500 font-medium">No users found matching your criteria.</td></tr>
               ) : (
                 filteredUsers.map((user) => (
@@ -208,36 +244,36 @@ export default function UsersManagement() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-4">
-                      <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-mono font-medium border border-slate-200">
-                        {user.bolna_sub_account_id}
-                      </span>
+                    
+                    <td className="px-6 py-4">
+                      {user.custom_domain ? (
+                        <a href={`https://${user.custom_domain}`} target="_blank" className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors inline-flex items-center">
+                          {user.custom_domain} <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium italic">Not Set</span>
+                      )}
                     </td>
 
-                    <td className="px-2 py-4">
+                    <td className="px-6 py-4">
                       <span className="px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 text-xs font-extrabold border border-orange-100">
                         {Number(user.minutes_used || 0).toLocaleString()} Mins
                       </span>
                     </td>
-                    <td className="px-2 py-4">
+                    <td className="px-6 py-4">
                       <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-extrabold border border-blue-100">
                         ${Number(user.amount_spent || 0).toFixed(2)}
                       </span>
                     </td>
 
-                    <td className="px-2 py-4">
+                    <td className="px-6 py-4">
                       <p className="text-sm font-extrabold text-emerald-600 bg-emerald-50 inline-flex px-3 py-1.5 rounded-lg border border-emerald-100">
                         {Number(user.balance).toFixed(0)} <span className="ml-1 text-[10px] font-medium text-emerald-700">Mins Left</span>
                       </p>
                     </td>
-                    <td className="px-2 py-4 text-right flex items-center justify-end space-x-2">
-                      <button 
-                        onClick={() => handleLoginAs(user.id, user.name)}
-                        title="Login as this user in a new tab"
-                        className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors border border-slate-200 shadow-sm"
-                      >
-                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
-                        Login As
+                    <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
+                      <button onClick={() => handleLoginAs(user.id, user.name)} className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors border border-slate-200 shadow-sm">
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg> Login As
                       </button>
 
                       <button onClick={() => openEditModal(user)} className="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors" title="Edit User">
@@ -289,7 +325,7 @@ export default function UsersManagement() {
               )}
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">{isEditModalOpen ? 'New Password (Leave empty to keep current)' : 'Initial Password'}</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">{isEditModalOpen ? 'New Password (Leave empty)' : 'Initial Password'}</label>
                 <input type="password" required={!isEditModalOpen} className="w-full px-4 py-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="••••••••" />
               </div>
 
