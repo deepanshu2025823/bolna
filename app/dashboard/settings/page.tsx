@@ -15,9 +15,7 @@ export default function ClientSettings() {
   
   const [domainData, setDomainData] = useState({ custom_domain: '' });
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
-  const [domainStatus, setDomainStatus] = useState<'idle' | 'generating' | 'verifying' | 'connected' | 'failed'>('idle');
-
-  const [adminTargetCname, setAdminTargetCname] = useState('cname.vercel-dns.com');
+  const [domainStatus, setDomainStatus] = useState<'idle' | 'verifying' | 'connected' | 'failed'>('idle');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -30,9 +28,6 @@ export default function ClientSettings() {
             company_name: data.data.company_name || '',
             logo_url: data.data.logo_url || ''
           });
-          if (data.data.admin_target_domain) {
-            setAdminTargetCname(data.data.admin_target_domain);
-          }
         }
       } catch (error) {
         console.error('Failed to load profile');
@@ -58,8 +53,8 @@ export default function ClientSettings() {
     }
 
     if (tab === 'domain') {
-      setDomainStatus('generating');
-      setStatusMsg({ type: 'success', text: 'Domain record generated! Please complete Step 1 and Step 2.' });
+      setStatusMsg({ type: 'success', text: 'Domain record generated. Please configure your DNS settings.' });
+      setDomainStatus('idle');
       return; 
     }
 
@@ -224,7 +219,7 @@ export default function ClientSettings() {
                         setDomainData({custom_domain: e.target.value});
                         setDomainStatus('idle');
                       }} 
-                      placeholder="e.g. client.myagency.com" 
+                      placeholder="e.g. portal.myagency.com" 
                       className="w-full px-4 py-3.5 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-slate-900" 
                     />
                     <button 
@@ -257,10 +252,9 @@ export default function ClientSettings() {
                           <tr>
                             <td className="px-4 py-4 font-mono font-medium text-slate-600">CNAME</td>
                             <td className="px-4 py-4 font-mono text-slate-900 font-bold">{domainData.custom_domain.split('.')[0] === 'www' ? 'www' : domainData.custom_domain.split('.')[0]}</td>
-                            
                             <td className="px-4 py-4 font-mono text-blue-600 font-medium flex items-center justify-between">
-                              {adminTargetCname}
-                              <button type="button" onClick={() => copyToClipboard(adminTargetCname)} className="text-slate-400 hover:text-blue-600 transition-colors ml-2">
+                              cname.vercel-dns.com
+                              <button type="button" onClick={() => copyToClipboard('cname.vercel-dns.com')} className="text-slate-400 hover:text-blue-600 transition-colors ml-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                               </button>
                             </td>
