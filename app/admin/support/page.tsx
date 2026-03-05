@@ -3,25 +3,48 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function AdminSupportTickets() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchTickets = async () => {
-    try {
-      const res = await fetch('/api/admin/support');
-      const data = await res.json();
-      if (data.success) setTickets(data.data);
-    } catch (error) {
-      console.error('Failed to fetch tickets');
-    }
-    setIsLoading(false);
-  };
+  const [hasAccess, setHasAccess] = useState(false); 
+  const router = useRouter();
 
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    const fetchAccessAndTickets = async () => {
+      try {
+        setIsLoading(true);
+        
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (!profileData.success) {
+          router.push('/login');
+          return;
+        }
+
+        const role = profileData.data.role;
+        const permissions = profileData.data.permissions || [];
+
+        if (role === 'admin' || permissions.includes('manage_support')) {
+          setHasAccess(true);
+          const ticketsRes = await fetch('/api/admin/support');
+          const ticketsData = await ticketsRes.json();
+          if (ticketsData.success) setTickets(ticketsData.data);
+        } else {
+          router.push('/admin/dashboard');
+          return;
+        }
+
+      } catch (error) {
+        console.error('Failed to fetch data');
+      }
+      setIsLoading(false);
+    };
+
+    fetchAccessAndTickets();
+  }, [router]);
 
   const toggleStatus = async (id: number, currentStatus: string) => {
     const newStatus = currentStatus === 'open' ? 'closed' : 'open';
@@ -31,11 +54,19 @@ export default function AdminSupportTickets() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: newStatus })
       });
-      fetchTickets();
+      const res = await fetch('/api/admin/support');
+      const data = await res.json();
+      if (data.success) setTickets(data.data);
     } catch (error) {
       alert('Failed to update status');
     }
   };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
+  }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -66,9 +97,7 @@ export default function AdminSupportTickets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">Loading inbox...</td></tr>
-              ) : tickets.length === 0 ? (
+              {tickets.length === 0 ? (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-medium">No support tickets found.</td></tr>
               ) : (
                 tickets.map((ticket) => (

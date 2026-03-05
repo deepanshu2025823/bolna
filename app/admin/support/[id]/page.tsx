@@ -25,30 +25,71 @@ export default function AdminTicketChat() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false); 
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchChat = async () => {
-    try {
-      const res = await fetch(`/api/admin/support/${id}`);
-      const data = await res.json();
-      if (data.success) {
-        setTicket(data.data.ticket);
-        setMessages(data.data.messages);
-      } else {
-        router.push('/admin/support');
+  useEffect(() => {
+    const checkAccessAndFetchChat = async () => {
+      try {
+        setIsLoading(true);
+        
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (!profileData.success) {
+          router.push('/login');
+          return;
+        }
+
+        const role = profileData.data.role;
+        const permissions = profileData.data.permissions || [];
+
+        if (role === 'admin' || permissions.includes('manage_support')) {
+          setHasAccess(true);
+          
+          const res = await fetch(`/api/admin/support/${id}`);
+          const data = await res.json();
+          if (data.success) {
+            setTicket(data.data.ticket);
+            setMessages(data.data.messages);
+          } else {
+            router.push('/admin/support');
+          }
+        } else {
+          router.push('/admin/dashboard');
+          return;
+        }
+
+      } catch (error) {
+        console.error('Failed to verify access or load chat');
       }
-    } catch (error) {
-      console.error('Failed to load chat');
-    }
-    setIsLoading(false);
-  };
+      setIsLoading(false);
+    };
+
+    checkAccessAndFetchChat();
+
+  }, [id, router]);
 
   useEffect(() => {
-    fetchChat();
-    const interval = setInterval(fetchChat, 5000);
+    if (!hasAccess) return;
+
+    const fetchOnlyChat = async () => {
+      try {
+        const res = await fetch(`/api/admin/support/${id}`);
+        const data = await res.json();
+        if (data.success) {
+          setTicket(data.data.ticket);
+          setMessages(data.data.messages);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat data');
+      }
+    };
+
+    const interval = setInterval(fetchOnlyChat, 5000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, hasAccess]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,7 +110,11 @@ export default function AdminTicketChat() {
       
       if (data.success) {
         setNewMessage('');
-        fetchChat(); 
+        const refreshRes = await fetch(`/api/admin/support/${id}`);
+        const refreshData = await refreshRes.json();
+        if (refreshData.success) {
+          setMessages(refreshData.data.messages);
+        }
       } else {
         alert(data.message);
       }
@@ -87,7 +132,8 @@ export default function AdminTicketChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: ticket?.id, status: newStatus })
       });
-      fetchChat();
+      
+      setTicket((prev: any) => ({ ...prev, status: newStatus }));
     } catch (error) {
       alert('Failed to update status');
     }
@@ -96,6 +142,8 @@ export default function AdminTicketChat() {
   if (isLoading) {
     return <div className="flex justify-center py-20"><svg className="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>;
   }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] animate-fade-in max-w-5xl mx-auto">
