@@ -74,7 +74,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: 'Email already exists.' }, { status: 400 });
     }
 
-    let bolnaSubAccountId = `simulated_bolna_${Date.now()}`;
+    let bolnaSubAccountId = '';
+    const bolnaApiKey = process.env.BOLNA_API_KEY;
+
+    if (!bolnaApiKey) {
+      connection.release();
+      return NextResponse.json({ success: false, message: 'Bolna API key is missing in server configuration.' }, { status: 500 });
+    }
+
+    try {
+      const bolnaRes = await fetch('https://api.bolna.dev/v1/subaccounts', { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${bolnaApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: name,
+          email: email
+        })
+      });
+
+      if (!bolnaRes.ok) {
+        const errorData = await bolnaRes.json();
+        console.error("Bolna Creation Error:", errorData);
+        connection.release();
+        return NextResponse.json({ success: false, message: 'Failed to create sub-account on Bolna.' }, { status: 500 });
+      }
+
+      const bolnaData = await bolnaRes.json();
+      
+      bolnaSubAccountId = bolnaData.id; 
+
+    } catch (bolnaError) {
+      console.error("Bolna API Fetch Error:", bolnaError);
+      connection.release();
+      return NextResponse.json({ success: false, message: 'Error communicating with Bolna API.' }, { status: 500 });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [userResult]: any = await connection.query(
