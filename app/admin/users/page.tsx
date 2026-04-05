@@ -16,6 +16,12 @@ export default function UsersManagement() {
   const [hasAccess, setHasAccess] = useState(false);
   const router = useRouter();
   
+  // 🚀 NEW: Call Logs / Executions States 🚀
+  const [isExecutionsModalOpen, setIsExecutionsModalOpen] = useState(false);
+  const [executionsData, setExecutionsData] = useState<any[]>([]);
+  const [isExecutionsLoading, setIsExecutionsLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
   const [formData, setFormData] = useState({ name: '', email: '', password: '', balance: '', role: 'client' });
   const [formStatus, setFormStatus] = useState<{ type: 'idle'|'loading'|'success'|'error', msg: string }>({ type: 'idle', msg: '' });
 
@@ -88,6 +94,28 @@ export default function UsersManagement() {
     setFormData({ name: user.name, email: user.email, password: '', balance: user.balance || 0, role: user.role || 'client' });
     setFormStatus({ type: 'idle', msg: '' });
     setIsEditModalOpen(true);
+  };
+
+  // 🚀 NEW: Fetch & Open Executions Modal Function 🚀
+  const openExecutionsModal = async (user: any) => {
+    setSelectedUser(user);
+    setIsExecutionsModalOpen(true);
+    setIsExecutionsLoading(true);
+    setExecutionsData([]);
+
+    try {
+      // Calls the new API route we created for executions
+      const res = await fetch(`/api/admin/users/executions?sub_account_id=${user.bolna_sub_account_id}`);
+      const data = await res.json();
+      if (data.success) {
+        setExecutionsData(data.data || []);
+      } else {
+        console.error(data.message);
+      }
+    } catch (e) {
+      console.error("Failed to fetch executions", e);
+    }
+    setIsExecutionsLoading(false);
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -262,7 +290,7 @@ export default function UsersManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-extrabold border border-blue-100">
-                        ${Number(user.amount_spent || 0).toFixed(2)}
+                        ${Number(user.amount_spent || 0).toFixed(4)}
                       </span>
                     </td>
 
@@ -274,6 +302,11 @@ export default function UsersManagement() {
                     <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
                       <button onClick={() => handleLoginAs(user.id, user.name)} className="flex items-center text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 px-3 py-1.5 rounded-lg transition-colors border border-slate-200 shadow-sm">
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg> Login As
+                      </button>
+
+                      {/* 🚀 NEW: Call Logs / Executions Button 🚀 */}
+                      <button onClick={() => openExecutionsModal(user)} className="text-slate-400 hover:text-purple-600 p-2 rounded-lg hover:bg-purple-50 transition-colors border border-transparent hover:border-purple-200" title="View Call Logs & Costs">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                       </button>
 
                       <button onClick={() => openEditModal(user)} className="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors" title="Edit User">
@@ -291,6 +324,83 @@ export default function UsersManagement() {
         </div>
       </div>
 
+      {/* 🚀 NEW: Executions & Call Logs Modal UI 🚀 */}
+      {isExecutionsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setIsExecutionsModalOpen(false)}></div>
+          
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl relative z-10 animate-fade-in overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Call Logs & Executions</h3>
+                <p className="text-sm text-slate-500 font-medium">Viewing real-time cost data for {selectedUser?.name}</p>
+              </div>
+              <button onClick={() => setIsExecutionsModalOpen(false)} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm border border-gray-200 transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+              {isExecutionsLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                   <svg className="animate-spin h-10 w-10 text-purple-600 mb-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                   <p className="text-slate-500 font-medium text-sm">Fetching call logs from Bolna...</p>
+                </div>
+              ) : executionsData.length === 0 ? (
+                 <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                    </div>
+                    <p className="text-slate-700 font-bold text-lg mb-1">No call records found</p>
+                    <p className="text-slate-400 text-sm font-medium">This client hasn't made any calls yet.</p>
+                 </div>
+              ) : (
+                 <div className="space-y-4">
+                   {executionsData.map((exec, idx) => (
+                      <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-5 hover:shadow-md transition-shadow hover:border-purple-200">
+                         <div>
+                           <div className="flex items-center mb-2">
+                             <span className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide ${exec.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
+                               {exec.status}
+                             </span>
+                             <span className="text-xs font-mono text-slate-400 ml-3">ID: {exec.id.substring(0,12)}...</span>
+                           </div>
+                           <div className="flex flex-wrap items-center text-sm text-slate-600 font-medium gap-x-4 gap-y-2">
+                             <span className="flex items-center bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+                               <svg className="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> 
+                               {exec.conversation_time || (exec.telephony_data?.duration || 0)} seconds
+                             </span>
+                             <span className="flex items-center text-slate-500">
+                               <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                               {new Date(exec.created_at).toLocaleString()}
+                             </span>
+                           </div>
+                         </div>
+                         
+                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between md:justify-end gap-4 md:border-l border-gray-100 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 mt-2 md:mt-0 w-full md:w-auto">
+                           <div className="text-left md:text-right">
+                              <p className="text-[11px] text-slate-400 uppercase font-extrabold tracking-wider mb-1">Call Cost</p>
+                              <p className="text-xl font-black text-purple-600">${Number(exec.total_cost || 0).toFixed(4)}</p>
+                           </div>
+                           {exec.telephony_data?.recording_url ? (
+                             <a href={exec.telephony_data.recording_url} target="_blank" className="flex items-center justify-center px-4 py-2.5 w-full sm:w-auto bg-slate-900 hover:bg-purple-600 text-white text-sm font-bold rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">
+                               <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                               Play
+                             </a>
+                           ) : (
+                             <span className="text-xs text-slate-400 font-medium px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 w-full sm:w-auto text-center">No Audio</span>
+                           )}
+                         </div>
+                      </div>
+                   ))}
+                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Existing Client Form Modal */}
       {(isCreateModalOpen || isEditModalOpen) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => {setIsCreateModalOpen(false); setIsEditModalOpen(false);}}></div>

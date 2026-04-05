@@ -72,8 +72,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     router.push('/login');
   };
 
+  // 🚀 NEW: Added AI Agents to the Navigation Menu 🚀
   const navigation = [
     { name: 'Overview', href: '/dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+    { name: 'AI Agents', href: '/dashboard/agents', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
     { name: 'Call Executions', href: '/dashboard/executions', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
     { name: 'My Numbers', href: '/dashboard/numbers', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
     { name: 'My Subscription', href: '/dashboard/plans', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
@@ -167,7 +169,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               
-              if (isRestricted && item.name === 'Call Executions') {
+              // 🚀 Prevent clicking on Agents or Executions if balance is 0
+              if (isRestricted && (item.name === 'Call Executions' || item.name === 'AI Agents')) {
                 return (
                   <div key={item.name} className="flex items-center justify-between px-3.5 py-3 text-sm font-semibold rounded-2xl text-slate-300 cursor-not-allowed">
                     <div className="flex items-center">
